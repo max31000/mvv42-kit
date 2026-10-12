@@ -1,14 +1,16 @@
 name: Release
 
+# build → smoke the packed tarball (npm + yarn v1) → only then publish the GitHub Release with that same file.
 on:
   push:
     tags: ['v*']
 
+permissions:
+  contents: read
+
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     outputs:
       tgz: ${{ steps.pack.outputs.tgz }}
     steps:
@@ -26,23 +28,20 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: npm run check:entries
       - id: pack
         run: |
           tgz="$(npm pack --silent | tail -n1)"
           echo "tgz=$tgz" >> "$GITHUB_OUTPUT"
           sha256sum "$tgz"
-      - name: Create GitHub Release (never re-uploads under an existing tag)
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            echo "Release ${GITHUB_REF_NAME} already exists — refusing to replace its asset"; exit 1
-          fi
-          gh release create "${GITHUB_REF_NAME}" "${{ steps.pack.outputs.tgz }}" \
-            --title "${GITHUB_REF_NAME}" --generate-notes
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tarball
+          path: ${{ steps.pack.outputs.tgz }}
+          if-no-files-found: error
 
   smoke:
-    needs: release
+    needs: build
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -53,19 +52,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: tarball
+          path: ${{ runner.temp }}/pkg
       - name: Scratch Vite + React + Mantine app
         run: cp -r smoke "$RUNNER_TEMP/app"
-      - name: Install the released tarball (${{ matrix.pm }})
+      - name: Install the packed tarball (${{ matrix.pm }})
         working-directory: ${{ runner.temp }}/app
         run: |
-          url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${{ needs.release.outputs.tgz }}"
-          for i in 1 2 3 4 5; do curl -fsSLI "$url" >/dev/null && break; sleep 5; done
+          tgz="$RUNNER_TEMP/pkg/${{ needs.build.outputs.tgz }}"
           if [ "${{ matrix.pm }}" = npm ]; then
             npm install --no-audit --no-fund
-            npm install --no-audit --no-fund "@mvv42/kit@$url"
+            npm install --no-audit --no-fund "@mvv42/kit@file:$tgz"
           else
             npm i -g yarn@1
-            yarn add "@mvv42/kit@$url" --non-interactive
+            yarn add "@mvv42/kit@file:$tgz" --non-interactive
           fi
       - name: Build
         working-directory: ${{ runner.temp }}/app
@@ -73,3 +75,29 @@ jobs:
       - name: Single react / @mantine/core, script + tokens + font in the bundle
         working-directory: ${{ runner.temp }}/app
         run: node check.mjs
+
+  publish:
+    needs: [build, smoke]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: tarball
+      - name: Create GitHub Release (never re-uploads under an existing tag)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "Release ${GITHUB_REF_NAME} already exists — refusing to replace its asset"; exit 1
+          fi
+          sha256sum "${{ needs.build.outputs.tgz }}"
+          gh release create "${GITHUB_REF_NAME}" "${{ needs.build.outputs.tgz }}" \
+            --title "${GITHUB_REF_NAME}" --generate-notes --verify-tag
+      - name: Asset is downloadable
+        run: |
+          url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${{ needs.build.outputs.tgz }}"
+          for i in 1 2 3 4 5 6; do curl -fsSL -o /tmp/asset.tgz "$url" && break; sleep 5; done
+          cmp /tmp/asset.tgz "${{ needs.build.outputs.tgz }}"

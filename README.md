@@ -73,13 +73,20 @@ export default defineConfig({
 });
 ```
 
-`mvv42Html()` prepends `colorSchemeInlineScript` (and `<meta name="color-scheme" content="light dark">` if missing)
-to `<head>`. It reads the shared `mvv42-color-scheme` key and sets `data-mantine-color-scheme` before first paint.
-Without Vite, paste the script yourself:
+`mvv42Html()` puts the colour-scheme script (and `<meta name="color-scheme" content="light dark">` if missing)
+right after `<meta charset>`. It reads the shared `mvv42-color-scheme` key (falling back to the legacy
+`mantine-color-scheme-value` and `cashpulse-settings` keys, then the OS) and sets `data-mantine-color-scheme`
+before first paint.
+
+Without Vite, paste this into `<head>` right after `<meta charset>` (identical to `colorSchemeInlineScript`):
 
 ```html
-<script>/* contents of colorSchemeInlineScript from '@mvv42/kit' */</script>
+<meta name="color-scheme" content="light dark">
+<script data-mvv42="color-scheme">(function(){try{var d=document.documentElement,s=localStorage,ok=function(x){return x==='light'||x==='dark'||x==='auto'},v=s.getItem('mvv42-color-scheme');if(!ok(v)){v=s.getItem('mantine-color-scheme-value');if(!ok(v)){v='auto';try{var c=JSON.parse(s.getItem('cashpulse-settings')||'null');c=c&&(c.state&&c.state.colorScheme||c.colorScheme);if(ok(c))v=c;}catch(e){}}}if(v==='auto'){v=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}d.setAttribute('data-mantine-color-scheme',v);d.style.colorScheme=v;}catch(e){}})();</script>
 ```
+
+With a Content-Security-Policy, allow it by hash: `script-src 'self' 'sha256-ZcaVJFYIVAnkUXiEq2ZbZrgHVGrV5Y8kNo8Z1qdRvwk='`
+(also exported as `colorSchemeInlineScriptSha256`; the value changes only when the script changes — see the changelog).
 
 **2. CSS** — Mantine first, then the kit (the JS never imports CSS; `sideEffects` keeps these imports):
 
@@ -117,8 +124,8 @@ createRoot(root).render(
 `Mvv42Provider` renders `MantineProvider` (kit theme for the accent, shared colour-scheme manager, token remap via
 `cssVariablesResolver`), `Notifications`, the shell bridge and the kit context. **Remove your own
 `<Notifications/>`, theme, colour-scheme switcher and auth store.** On startup it removes the old token keys
-(`cashpulse-auth`, `bonds-auth`, `credit-calc-auth`) and migrates `mantine-color-scheme-value` /
-`cashpulse-settings.colorScheme` into `mvv42-color-scheme`.
+(`cashpulse-auth`, `bonds-auth`, `credit-calc-auth`) and, outside the shell, copies `mantine-color-scheme-value` /
+`cashpulse-settings.colorScheme` into `mvv42-color-scheme` when that key is absent (legacy keys are left in place).
 
 **4. Pages:**
 
@@ -193,7 +200,8 @@ the shell iframe). Screenshots (light/dark × 1440/390) are in [`docs/screenshot
 - `ErrorState { title?, error?, onRetry?, compact? }` — understands `ApiError` (401 «Нужно войти», 403 «Нет доступа»,
   404 «Не найдено») and shows `HTTP 502 · code` as a technical hint.
 - `LoginRequired { title?, description?, children }` — uses the provider's `serviceId`: spinner → «Сервис входа
-  недоступен» (retry) → «Войти через Telegram» → «Нет доступа» (signed in, not granted) → children.
+  недоступен» (busy retry) → «Войти через Telegram» → «Нет доступа» (signed in but not granted, or the service is
+  missing from `/me` — that also logs a console warning) → children.
 - `AccountButton` — standalone only: «Войти» or the avatar menu with «Выйти».
 
 ![States](docs/screenshots/states-light-1440.png)
@@ -242,12 +250,12 @@ const { me, user, loading, status, app, refresh } = useMe(); // shared, re-reads
 
 | API | Behaviour |
 |---|---|
-| `mvv42Fetch(input, init?) → Response` | raw fetch, `credentials: 'same-origin'`, 401 → refresh once → retry once |
-| `apiJson<T>(input, init?) → T` | throws `ApiError { status, code, message }` on non-2xx (`code` from `{ "error": "…" }`), `undefined` for 204 |
+| `mvv42Fetch(input, init?) → Response` | raw fetch, `credentials: 'same-origin'` for URLs (a `Request` keeps its own), 401 → refresh once → retry once |
+| `apiJson<T>(input, init?) → T` | merges `Request`/`init` headers + `Accept: application/json`; throws `ApiError { status, code, message }` on non-2xx (`code` from `{ "error": "…" }`) and `code: 'invalid_json'` on a non-JSON 2xx body; `undefined` for 204 |
 | `getMe() → Me \| null` | `null` = auth unavailable (network / non-200); `{ user: null }` = anonymous |
-| `refreshSession() → boolean` | single-flight in the page + `navigator.locks` when available |
+| `refreshSession() → boolean` | single-flight in the page + `navigator.locks` when available (falls back if it throws), 10 s timeout |
 | `requestLogin(serviceId)` | inside the shell: `AUTH_REQUIRED`; standalone: `/?login=1&return=<path>` |
-| `logout()` | `POST /auth/api/logout`, then local `useMe` refresh |
+| `logout()` | `POST /auth/api/logout`, then `useMe` refresh here and in other same-origin documents (`BroadcastChannel('mvv42-auth')`, storage-event fallback) |
 | `onShellMessage(handler)` | only same-origin messages from the parent window, validated |
 | `type ShellMessage` | `READY` · `NAVIGATE` · `AUTH_REQUIRED` · `THEME` · `AUTH_CHANGED` |
 
@@ -333,5 +341,28 @@ attaches `mvv42-kit-X.Y.Z.tgz` to a GitHub Release, then a smoke job installs th
 into a scratch Vite + React + Mantine app, builds it and asserts a single copy of `react` and `@mantine/core`.
 An existing tag is never re-uploaded — fixes ship as the next patch. `dist/` is not committed; there are no
 `prepare`/`prepack`/`postinstall` scripts.
+
+## Changelog
+
+### 0.1.1
+- Release workflow smokes the packed tarball (npm + yarn v1) **before** publishing; CI checks the full chunk
+  import closure of each entry (`npm run check:entries`).
+- Platform: refresh has a 10 s timeout and survives a throwing `navigator.locks.request`; `mvv42Fetch` keeps the
+  credentials of a `Request` input, `apiJson` merges its headers; a non-JSON 2xx body throws
+  `ApiError(status, 'invalid_json')`; `requestLogin` keeps backslashes inside the return path (only a leading run
+  of `/` and `\` collapses to `/`); `logout()` notifies other tabs/iframes (`BroadcastChannel` / storage).
+- `useMe` re-reads `/me` when a component mounts after every subscriber had unmounted, and on auth broadcasts.
+- Colour scheme: no migration inside the shell; legacy keys are copied, never removed; the inline script also
+  falls back to `cashpulse-settings`. **New CSP hash** — `colorSchemeInlineScriptSha256` (exported from `@mvv42/kit`
+  and `@mvv42/kit/vite`).
+- `mvv42Html()` injects right after `<meta charset>`.
+- `useShellBridge` follows the provider's `insideShell`; `LoginRequired` treats a service missing from `/me` as
+  not granted and shows a busy retry; `ErrorState` gets `retrying`; the skip link focuses `<main>` without
+  changing the URL.
+- `package.json` exports gain a `default` condition.
+
+### 0.1.0
+- First release: theme, tokens, `Mvv42Provider`, `AppLayout`, `Page`/`Section`/`Metric`/states, charts, platform
+  client, `mvv42Html()`.
 
 MIT © Max Vodopianov

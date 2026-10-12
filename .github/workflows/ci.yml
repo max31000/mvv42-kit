@@ -23,13 +23,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - name: Core entries stay free of optional peers
-        run: |
-          set -e
-          for f in index platform; do
-            ! grep -lE "from ['\"](react-router-dom|react-router|recharts)['\"]" dist/$f.js
-          done
-          # vite entry must be Node-safe (no React/Mantine)
-          ! grep -E "from ['\"](react|@mantine/[a-z]+)['\"]" dist/vite.js
+      - name: Entry import closures stay free of optional peers
+        run: npm run check:entries
       - run: npm pack --dry-run
       - run: npm run playground:build
