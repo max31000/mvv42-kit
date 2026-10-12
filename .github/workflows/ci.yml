@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: Core entries stay free of optional peers
+        run: |
+          set -e
+          for f in index platform; do
+            ! grep -lE "from ['\"](react-router-dom|react-router|recharts)['\"]" dist/$f.js
+          done
+          # vite entry must be Node-safe (no React/Mantine)
+          ! grep -E "from ['\"](react|@mantine/[a-z]+)['\"]" dist/vite.js
+      - run: npm pack --dry-run
+      - run: npm run playground:build

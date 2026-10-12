@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      tgz: ${{ steps.pack.outputs.tgz }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Tag matches package.json version
+        run: |
+          v="$(node -p "require('./package.json').version")"
+          [ "v$v" = "${GITHUB_REF_NAME}" ] || { echo "tag ${GITHUB_REF_NAME} != package.json v$v"; exit 1; }
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - id: pack
+        run: |
+          tgz="$(npm pack --silent | tail -n1)"
+          echo "tgz=$tgz" >> "$GITHUB_OUTPUT"
+          sha256sum "$tgz"
+      - name: Create GitHub Release (never re-uploads under an existing tag)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "Release ${GITHUB_REF_NAME} already exists — refusing to replace its asset"; exit 1
+          fi
+          gh release create "${GITHUB_REF_NAME}" "${{ steps.pack.outputs.tgz }}" \
+            --title "${GITHUB_REF_NAME}" --generate-notes
+
+  smoke:
+    needs: release
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pm: [npm, yarn]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Scratch Vite + React + Mantine app
+        run: cp -r smoke "$RUNNER_TEMP/app"
+      - name: Install the released tarball (${{ matrix.pm }})
+        working-directory: ${{ runner.temp }}/app
+        run: |
+          url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/${{ needs.release.outputs.tgz }}"
+          for i in 1 2 3 4 5; do curl -fsSLI "$url" >/dev/null && break; sleep 5; done
+          if [ "${{ matrix.pm }}" = npm ]; then
+            npm install --no-audit --no-fund
+            npm install --no-audit --no-fund "@mvv42/kit@$url"
+          else
+            npm i -g yarn@1
+            yarn add "@mvv42/kit@$url" --non-interactive
+          fi
+      - name: Build
+        working-directory: ${{ runner.temp }}/app
+        run: npx vite build
+      - name: Single react / @mantine/core, script + tokens + font in the bundle
+        working-directory: ${{ runner.temp }}/app
+        run: node check.mjs
