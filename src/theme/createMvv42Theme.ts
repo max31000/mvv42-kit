@@ -1,45 +1,4 @@
-import {
-  Accordion,
-  ActionIcon,
-  Alert,
-  Anchor,
-  Autocomplete,
-  Avatar,
-  Badge,
-  Button,
-  Card,
-  Checkbox,
-  Code,
-  createTheme,
-  Divider,
-  Drawer,
-  Input,
-  InputWrapper,
-  Kbd,
-  Loader,
-  Menu,
-  Modal,
-  MultiSelect,
-  NavLink,
-  Notification,
-  Pagination,
-  Paper,
-  Popover,
-  Progress,
-  Radio,
-  SegmentedControl,
-  Select,
-  Skeleton,
-  Switch,
-  Table,
-  Tabs,
-  TagsInput,
-  ThemeIcon,
-  Title,
-  Tooltip,
-  mergeThemeOverrides,
-  type MantineThemeOverride,
-} from '@mantine/core';
+import { createTheme, mergeThemeOverrides, type MantineTheme, type MantineThemeOverride } from '@mantine/core';
 import { accentTuples, blue, dark, green, isMvv42Accent, orange, red, teal, violet, zinc, type Mvv42Accent } from './palette';
 
 export interface CreateMvv42ThemeOptions {
@@ -56,6 +15,33 @@ const comboboxClassNames = {
 
 const inputDefaults = { size: 'sm' as const };
 
+interface ColorProps {
+  color?: unknown;
+  variant?: unknown;
+}
+
+/**
+ * `var(--mvv-on-<color>)` for a theme colour name (or the primary colour when none is given): the label colour
+ * that stays readable on that colour's filled shade in the *current* scheme. Mantine's own autoContrast is
+ * computed once in JS and cannot follow the scheme (zinc is #18181b in light and #fafafa in dark). Explicit
+ * shades (`blue.7`) and CSS colours keep Mantine's behaviour.
+ */
+export function onColorVar(theme: MantineTheme, color: unknown): string | undefined {
+  const name = color === undefined || color === null ? theme.primaryColor : color;
+  if (typeof name !== 'string' || name === 'dark' || !(name in theme.colors)) return undefined;
+  return `var(--mvv-on-${name})`;
+}
+
+const isFilled = (variant: unknown) => variant === undefined || variant === 'filled';
+
+/** Builds a `vars` resolver that sets `cssVar` to the on-colour for filled variants. */
+function filledLabel(...cssVars: string[]) {
+  return (theme: MantineTheme, props: ColorProps) => {
+    const on = isFilled(props.variant) ? onColorVar(theme, props.color) : undefined;
+    return on ? { root: Object.fromEntries(cssVars.map((v) => [v, on])) } : { root: {} };
+  };
+}
+
 /** Plain-object overrides for `@mantine/dates` (optional peer — never imported by the kit). */
 const datesInput = {
   defaultProps: { ...inputDefaults, popoverProps: { shadow: 'lg', radius: 'md' } },
@@ -70,7 +56,6 @@ const datesInput = {
  */
 export function createMvv42Theme(options: CreateMvv42ThemeOptions = {}): MantineThemeOverride {
   const accent: Mvv42Accent = isMvv42Accent(options.accent) ? options.accent : 'zinc';
-  const neutral = accent === 'zinc';
 
   return createTheme({
     fontFamily: 'var(--mvv-font-sans)',
@@ -101,7 +86,9 @@ export function createMvv42Theme(options: CreateMvv42ThemeOptions = {}): Mantine
       red,
     },
     primaryColor: accent,
-    primaryShade: neutral ? { light: 9, dark: 0 } : { light: 6, dark: 5 },
+    // One shade rule for every colour (Mantine applies primaryShade to all filled colours). The neutral zinc
+    // accent still reads as #18181b / #fafafa: the resolver maps `--mantine-color-zinc-filled` to zinc 9 / 0.
+    primaryShade: { light: 6, dark: 5 },
     autoContrast: true,
     luminanceThreshold: 0.3,
     white: '#ffffff',
@@ -135,23 +122,25 @@ export function createMvv42Theme(options: CreateMvv42ThemeOptions = {}): Mantine
     other: { mvv42Accent: accent },
 
     components: {
-      Button: Button.extend({
+      Button: {
         defaultProps: { size: 'sm' },
         classNames: { root: 'mvv-button', section: 'mvv-button-section' },
-      }),
-      ActionIcon: ActionIcon.extend({
+        vars: filledLabel('--button-color', '--button-hover-color'),
+      },
+      ActionIcon: {
         defaultProps: { variant: 'subtle', color: 'gray' },
         classNames: { root: 'mvv-action-icon' },
-      }),
-      Paper: Paper.extend({
+        vars: filledLabel('--ai-color', '--ai-hover-color'),
+      },
+      Paper: {
         defaultProps: { withBorder: true, radius: 'md' },
         classNames: { root: 'mvv-paper' },
-      }),
-      Card: Card.extend({
+      },
+      Card: {
         defaultProps: { withBorder: true, radius: 'md', padding: 'lg' },
         classNames: { root: 'mvv-paper mvv-card', section: 'mvv-card-section' },
-      }),
-      Table: Table.extend({
+      },
+      Table: {
         defaultProps: { verticalSpacing: 'xs', horizontalSpacing: 'sm', highlightOnHover: true },
         classNames: {
           table: 'mvv-table',
@@ -161,40 +150,40 @@ export function createMvv42Theme(options: CreateMvv42ThemeOptions = {}): Mantine
           tr: 'mvv-table-tr',
           caption: 'mvv-table-caption',
         },
-      }),
-      Input: Input.extend({
+      },
+      Input: {
         classNames: { wrapper: 'mvv-input', input: 'mvv-input-field', section: 'mvv-input-section' },
-      }),
-      InputWrapper: InputWrapper.extend({
+      },
+      InputWrapper: {
         classNames: {
           label: 'mvv-input-label',
           description: 'mvv-input-description',
           error: 'mvv-input-error',
           required: 'mvv-input-required',
         },
-      }),
-      Select: Select.extend({
+      },
+      Select: {
         defaultProps: { ...inputDefaults, comboboxProps: { shadow: 'lg', radius: 'md' }, withCheckIcon: true },
         classNames: comboboxClassNames,
-      }),
-      MultiSelect: MultiSelect.extend({
+      },
+      MultiSelect: {
         defaultProps: { ...inputDefaults, comboboxProps: { shadow: 'lg', radius: 'md' } },
         classNames: { ...comboboxClassNames, pill: 'mvv-pill' },
-      }),
-      Autocomplete: Autocomplete.extend({
+      },
+      Autocomplete: {
         defaultProps: { ...inputDefaults, comboboxProps: { shadow: 'lg', radius: 'md' } },
         classNames: comboboxClassNames,
-      }),
-      TagsInput: TagsInput.extend({
+      },
+      TagsInput: {
         defaultProps: { ...inputDefaults, comboboxProps: { shadow: 'lg', radius: 'md' } },
         classNames: { ...comboboxClassNames, pill: 'mvv-pill' },
-      }),
+      },
       DateInput: datesInput,
       DatePickerInput: datesInput,
       MonthPickerInput: datesInput,
       YearPickerInput: datesInput,
       DateTimePicker: datesInput,
-      Modal: Modal.extend({
+      Modal: {
         defaultProps: {
           radius: 'lg',
           centered: true,
@@ -208,8 +197,8 @@ export function createMvv42Theme(options: CreateMvv42ThemeOptions = {}): Mantine
           body: 'mvv-modal-body',
           close: 'mvv-modal-close',
         },
-      }),
-      Drawer: Drawer.extend({
+      },
+      Drawer: {
         defaultProps: {
           overlayProps: { backgroundOpacity: 1, color: 'var(--mvv-scrim)', blur: 4 },
         },
@@ -220,11 +209,11 @@ export function createMvv42Theme(options: CreateMvv42ThemeOptions = {}): Mantine
           body: 'mvv-modal-body',
           close: 'mvv-modal-close',
         },
-      }),
-      Tabs: Tabs.extend({
+      },
+      Tabs: {
         classNames: { root: 'mvv-tabs', list: 'mvv-tabs-list', tab: 'mvv-tab', panel: 'mvv-tabs-panel' },
-      }),
-      SegmentedControl: SegmentedControl.extend({
+      },
+      SegmentedControl: {
         defaultProps: { radius: 'sm', size: 'sm' },
         classNames: {
           root: 'mvv-segmented',
@@ -232,20 +221,28 @@ export function createMvv42Theme(options: CreateMvv42ThemeOptions = {}): Mantine
           label: 'mvv-segmented-label',
           control: 'mvv-segmented-control',
         },
-      }),
-      Badge: Badge.extend({
+        vars: (theme: MantineTheme, props: ColorProps) => {
+          const on = props.color ? onColorVar(theme, props.color) : undefined;
+          return { root: on ? { '--sc-label-color': on } : {} };
+        },
+      },
+      Badge: {
         defaultProps: { variant: 'light', radius: 'xl' },
         classNames: { root: 'mvv-badge' },
-      }),
-      Tooltip: Tooltip.extend({
+        vars: (theme: MantineTheme, props: ColorProps) => {
+          const on = props.variant === 'filled' ? onColorVar(theme, props.color) : undefined;
+          return { root: on ? { '--badge-color': on } : {} };
+        },
+      },
+      Tooltip: {
         defaultProps: { openDelay: 250, transitionProps: { transition: 'fade', duration: 120 }, radius: 'xs' },
         classNames: { tooltip: 'mvv-tooltip' },
-      }),
-      Popover: Popover.extend({
+      },
+      Popover: {
         defaultProps: { shadow: 'lg', radius: 'md' },
         classNames: { dropdown: 'mvv-dropdown mvv-popover' },
-      }),
-      Menu: Menu.extend({
+      },
+      Menu: {
         defaultProps: { shadow: 'lg', radius: 'md', transitionProps: { transition: 'pop-top-right', duration: 160 } },
         classNames: {
           dropdown: 'mvv-dropdown',
@@ -254,8 +251,8 @@ export function createMvv42Theme(options: CreateMvv42ThemeOptions = {}): Mantine
           divider: 'mvv-menu-divider',
           itemSection: 'mvv-menu-item-section',
         },
-      }),
-      Notification: Notification.extend({
+      },
+      Notification: {
         defaultProps: { radius: 'md' },
         classNames: {
           root: 'mvv-notification',
@@ -263,8 +260,8 @@ export function createMvv42Theme(options: CreateMvv42ThemeOptions = {}): Mantine
           description: 'mvv-notification-description',
           icon: 'mvv-notification-icon',
         },
-      }),
-      Alert: Alert.extend({
+      },
+      Alert: {
         defaultProps: { variant: 'light', radius: 'md' },
         classNames: {
           root: 'mvv-alert',
@@ -272,8 +269,8 @@ export function createMvv42Theme(options: CreateMvv42ThemeOptions = {}): Mantine
           message: 'mvv-alert-message',
           icon: 'mvv-alert-icon',
         },
-      }),
-      Accordion: Accordion.extend({
+      },
+      Accordion: {
         classNames: {
           root: 'mvv-accordion',
           item: 'mvv-accordion-item',
@@ -282,43 +279,63 @@ export function createMvv42Theme(options: CreateMvv42ThemeOptions = {}): Mantine
           chevron: 'mvv-accordion-chevron',
           content: 'mvv-accordion-content',
         },
-      }),
-      NavLink: NavLink.extend({
+      },
+      NavLink: {
         classNames: { root: 'mvv-navlink', label: 'mvv-navlink-label' },
-      }),
-      Skeleton: Skeleton.extend({
+      },
+      Skeleton: {
         defaultProps: { radius: 'sm' },
         classNames: { root: 'mvv-skeleton' },
-      }),
-      Loader: Loader.extend({
+      },
+      Loader: {
         defaultProps: { size: 'sm' },
-      }),
-      Switch: Switch.extend({
-        defaultProps: { size: 'sm' },
+      },
+      Switch: {
+        defaultProps: { size: 'sm', withThumbIndicator: false },
         classNames: { track: 'mvv-switch-track', thumb: 'mvv-switch-thumb', label: 'mvv-choice-label' },
-      }),
-      Checkbox: Checkbox.extend({
+        vars: (theme: MantineTheme, props: ColorProps) => {
+          const on = onColorVar(theme, props.color);
+          return { root: on ? { '--mvv-switch-on': on } : {} };
+        },
+      },
+      Checkbox: {
         defaultProps: { radius: 'xs' },
         classNames: { input: 'mvv-checkbox-input', label: 'mvv-choice-label' },
-      }),
-      Radio: Radio.extend({
+        vars: filledLabel('--checkbox-icon-color'),
+      },
+      Radio: {
         classNames: { radio: 'mvv-radio', label: 'mvv-choice-label' },
-      }),
-      Progress: Progress.extend({
+        vars: filledLabel('--radio-icon-color'),
+      },
+      Progress: {
         defaultProps: { radius: 'xl', size: 'sm' },
         classNames: { root: 'mvv-progress' },
-      }),
-      Pagination: Pagination.extend({
+      },
+      Pagination: {
         defaultProps: { size: 'sm', radius: 'sm' },
         classNames: { control: 'mvv-pagination-control' },
-      }),
-      Divider: Divider.extend({ classNames: { root: 'mvv-divider' } }),
-      Title: Title.extend({ classNames: { root: 'mvv-title' } }),
-      Anchor: Anchor.extend({ defaultProps: { underline: 'hover' }, classNames: { root: 'mvv-anchor' } }),
-      ThemeIcon: ThemeIcon.extend({ defaultProps: { variant: 'light', radius: 'sm' } }),
-      Avatar: Avatar.extend({ defaultProps: { radius: 'xl' }, classNames: { root: 'mvv-avatar' } }),
-      Kbd: Kbd.extend({ classNames: { root: 'mvv-kbd' } }),
-      Code: Code.extend({ classNames: { root: 'mvv-code' } }),
+      },
+      Divider: { classNames: { root: 'mvv-divider' } },
+      Title: { classNames: { root: 'mvv-title' } },
+      Anchor: { defaultProps: { underline: 'hover' }, classNames: { root: 'mvv-anchor mvv-link' } },
+      Slider: {
+        classNames: {
+          root: 'mvv-slider',
+          markWrapper: 'mvv-slider-mark-wrapper',
+          markLabel: 'mvv-slider-mark-label',
+          label: 'mvv-slider-label',
+        },
+      },
+      ThemeIcon: {
+        defaultProps: { variant: 'light', radius: 'sm' },
+        vars: (theme: MantineTheme, props: ColorProps) => {
+          const on = props.variant === 'filled' ? onColorVar(theme, props.color) : undefined;
+          return { root: on ? { '--ti-color': on } : {} };
+        },
+      },
+      Avatar: { defaultProps: { radius: 'xl' }, classNames: { root: 'mvv-avatar' } },
+      Kbd: { classNames: { root: 'mvv-kbd' } },
+      Code: { classNames: { root: 'mvv-code' } },
     },
   });
 }

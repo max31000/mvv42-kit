@@ -19,7 +19,7 @@ describe('createMvv42Theme', () => {
     expect(theme.respectReducedMotion).toBe(true);
     expect(theme.cursorType).toBe('pointer');
     expect(theme.colors[accent]).toHaveLength(10);
-    expect(theme.primaryShade).toEqual(accent === 'zinc' ? { light: 9, dark: 0 } : { light: 6, dark: 5 });
+    expect(theme.primaryShade).toEqual({ light: 6, dark: 5 });
   });
 
   it('uses zinc for gray and tokens for radius/shadows/fonts', () => {

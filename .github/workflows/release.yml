@@ -75,6 +75,9 @@ jobs:
       - name: Single react / @mantine/core, script + tokens + font in the bundle
         working-directory: ${{ runner.temp }}/app
         run: node check.mjs
+      - name: Bundle budget (provider + Button only)
+        working-directory: ${{ runner.temp }}/app
+        run: npx vite build --config vite.size.config.js && SIZE_BUDGET_KB=380 node check-size.mjs
 
   publish:
     needs: [build, smoke]

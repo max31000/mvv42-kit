@@ -154,11 +154,12 @@ export function Overview() {
 
 | Import | Contents | Needs |
 |---|---|---|
-| `@mvv42/kit` | `createMvv42Theme`, `Mvv42Provider`, `Page`, `Section`, `Metric`, `MetricGrid`, `EmptyState`, `ErrorState`, `LoginRequired`, `AccountButton`, `ColorSchemeToggle`, `UserAvatar`, `useMvv42Context`, `useInsideShell`, `useShellBridge`, `colorSchemeInlineScript`, `COLOR_SCHEME_KEY`, `tokens`, `icons` | Mantine |
+| `@mvv42/kit` | `createMvv42Theme`, `Mvv42Provider`, `Page`, `Section`, `Metric`, `MetricGrid`, `DataList`, `ListRow`, `TextLink`, `EmptyState`, `ErrorState`, `LoginRequired`, `AccountButton`, `ColorSchemeToggle`, `UserAvatar`, `safeAvatarUrl`, `useMvv42Context`, `useInsideShell`, `useShellBridge`, `colorSchemeInlineScript`, `COLOR_SCHEME_KEY`, `tokens`, `icons` | Mantine |
 | `@mvv42/kit/router` | `AppLayout`, `NavItem`, `useShellRouterSync` | `react-router-dom` 7 |
 | `@mvv42/kit/platform` | `mvv42Fetch`, `apiJson`, `ApiError`, `getMe`, `useMe`, `refreshSession`, `requestLogin`, `logout`, `onShellMessage`, `postToShell`, `isInsideShell`, types `Me`, `Mvv42User`, `AppAccess`, `ShellMessage` | React only (no Mantine) |
 | `@mvv42/kit/charts` | `chartColors`, `seriesColor`, `useChartTheme`, `ChartTooltip`, `ChartFrame`, `CHART_HEIGHT`, `CHART_HEIGHT_COMPACT`, `pickAxisTicks`, `axisTickAngle`, `useResponsiveChartSize` | `recharts` 3 |
-| `@mvv42/kit/vite` | `mvv42Html()` plugin, `colorSchemeInlineScript` | Node |
+| `@mvv42/kit/vite` | `mvv42Html()` plugin, `colorSchemeInlineScript`, `colorSchemeInlineScriptSha256` | Node |
+| `@mvv42/kit/testing` | `renderWithKit`, `kitWrapper`, `resetNotifications`, `resetKitState` | `@testing-library/react` |
 | `@mvv42/kit/styles.css` | Inter, tokens (`--mvv-*`, light/dark), base, Mantine overrides, kit components | — |
 
 The core entry never imports `react-router-dom` or `recharts`; CI checks it.
@@ -194,6 +195,14 @@ the shell iframe). Screenshots (light/dark × 1440/390) are in [`docs/screenshot
   value in 28px tabular figures; delta chip with an arrow and a screen-reader tone.
 - `MetricGrid { cols?: 1 | 2 | 3 | 4 }` — 4 → 2 columns under 900px, 1 under 360px.
 
+### DataList, ListRow, TextLink
+
+- `DataList` + `ListRow { title, description?, icon?, value?, action?, href?, linkProps?, onClick?, disabled? }` —
+  divided rows for `Section padding="none"`: icon · title/description · tabular value · action. With `href` /
+  `onClick` the main area is a real link/button (hover surface, focus ring, Enter/Space); `action` is a sibling.
+- `TextLink { subtle? }` (Mantine `Anchor`) or the `.mvv-link` class on any `<a>` / router `<Link>`: accent colour
+  (ink for zinc), underline on hover, focus ring.
+
 ### States
 
 - `EmptyState { icon?, title, description?, action?, compact? }`
@@ -202,7 +211,27 @@ the shell iframe). Screenshots (light/dark × 1440/390) are in [`docs/screenshot
 - `LoginRequired { title?, description?, children }` — uses the provider's `serviceId`: spinner → «Сервис входа
   недоступен» (busy retry) → «Войти через Telegram» → «Нет доступа» (signed in but not granted, or the service is
   missing from `/me` — that also logs a console warning) → children.
-- `AccountButton` — standalone only: «Войти» or the avatar menu with «Выйти».
+- `AccountButton` — standalone only: «Войти» or the avatar menu with «Выйти». Avatars use `photoUrl` only for
+  `https:` Telegram hosts (`t.me`, `*.telegram.org`, `cdn*.telegram-cdn.org`) — `safeAvatarUrl(url)` is exported.
+
+### Provider options
+
+`Mvv42Provider { serviceId, accent?, theme?, notifications?, insideShell?, env? }` — `notifications` is passed to
+`<Notifications />` over the kit defaults (`top-right` standalone / `top-center` in the shell, `limit: 4`).
+
+### Testing
+
+```tsx
+import { renderWithKit, resetKitState, resetNotifications } from '@mvv42/kit/testing';
+
+afterEach(() => {
+  resetNotifications(); // notifications.clean() + cleanQueue()
+  resetKitState();      // forget the shared /me snapshot and in-flight refresh
+});
+
+renderWithKit(<Positions />, { serviceId: 'bonds', accent: 'violet', wrapper: ({ children }) => <MemoryRouter>{children}</MemoryRouter> });
+renderHook(() => useThing(), { wrapper: kitWrapper({ serviceId: 'bonds' }) });
+```
 
 ![States](docs/screenshots/states-light-1440.png)
 
@@ -214,6 +243,8 @@ Use Mantine directly — the kit theme restyles it. Highlights:
 |---|---|
 | Button | size `sm` (36px), medium weight, subtle top highlight on filled, `default` = surface + hairline |
 | ActionIcon | `variant="subtle"`, `color="gray"` (pass `color`/`variant` for a coloured one) |
+| Filled Button / ActionIcon / Badge / ThemeIcon / SegmentedControl / Checkbox / Radio / Switch | label colour `var(--mvv-on-<color>)`, chosen per scheme (white while ≥ 3:1, else ink) — readable for every accent in light and dark |
+| Slider | mark labels never widen the track; edge labels stay inside |
 | Paper / Card | `withBorder`, radius `md`, surface background, hairline border |
 | Table | `highlightOnHover`, `verticalSpacing="xs"`, tabular numbers, quiet 12px header, faint stripes |
 | Inputs (Text/Number/Select/MultiSelect/Textarea/Autocomplete/Tags, `@mantine/dates` pickers) | 36px, label above in 13px, accent focus ring, 16px text on touch devices |
@@ -298,7 +329,8 @@ function ValueChart({ data }) {
 
 1. **One accent per service**, equal to its registry tile: `cashpulse` blue, `bonds` violet, `credit_calc` green,
    shell zinc. Accents: `zinc`, `blue` (`[6]=#228be6`), `green` (`[6]=#40c057`), `violet` (`[6]=#7048e8`), `teal`,
-   `orange`, `red`; `primaryShade` 6/5 (zinc 9/0); `autoContrast` gives green/orange buttons dark text.
+   `orange`, `red`; filled shade 6 (light) / 5 (dark) for every colour, zinc fills are ink (`#18181b` / `#fafafa`);
+   labels on fills use `--mvv-on-<color>` (green/orange get dark text).
 2. **Colour means something.** Accent = primary action, selection, focus. Green/red = gain/loss or status, always
    with a sign, icon or label. Don't colour headings, cards or whole rows.
 3. **No raw hex in pages.** Use Mantine props (`c="dimmed"`, `color="red"`), tokens (`var(--mvv-text-2)` or
@@ -343,6 +375,21 @@ An existing tag is never re-uploaded — fixes ship as the next patch. `dist/` i
 `prepare`/`prepack`/`postinstall` scripts.
 
 ## Changelog
+
+### 0.1.2
+- **Filled labels per scheme**: `--mvv-on-<color>` for every colour in light and dark, wired into Button,
+  ActionIcon, Badge, ThemeIcon, SegmentedControl, Checkbox, Radio, Switch via theme `vars` (fixes white-on-white
+  zinc buttons in dark). `primaryShade` is now 6/5 for all accents; zinc fills are mapped to zinc 9 / 0 in the
+  resolver (previously the zinc accent made every other colour's fill use shade 9/0).
+- Switch: token thumb that contrasts with the checked track; `withThumbIndicator: false` by default.
+- **Bundle**: theme overrides are plain objects (no `X.extend` imports), so unused Mantine components tree-shake.
+  Provider + Button scratch app: 573.7 → 325.1 kB min (172.4 → 99.6 kB gzip); CI budget 380 kB.
+- `Mvv42Provider` `notifications` prop; new `@mvv42/kit/testing` (`renderWithKit`, `kitWrapper`,
+  `resetNotifications`, `resetKitState`).
+- Refresh timeout is a timer race (no AbortSignal) — works under Vitest + jsdom.
+- New `DataList` / `ListRow`, `TextLink` + `.mvv-link`; `safeAvatarUrl` (avatars only from https Telegram hosts).
+- `ChartTooltip`: `note`, skips null/undefined values. `Metric` values shrink with the card and wrap instead of
+  truncating. Slider mark labels no longer overflow on phones.
 
 ### 0.1.1
 - Release workflow smokes the packed tarball (npm + yarn v1) **before** publishing; CI checks the full chunk

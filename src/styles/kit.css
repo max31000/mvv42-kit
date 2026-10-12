@@ -668,6 +668,7 @@
 }
 
 .mvv-metric {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -708,14 +709,15 @@
 }
 
 .mvv-metric-value {
+  /* Shrinks with the card (container query units) between 17px and 28px, then wraps — never truncates. */
   font-size: var(--mvv-fs-28);
+  font-size: clamp(var(--mvv-fs-17), 11.5cqi, var(--mvv-fs-28));
   font-weight: var(--mvv-fw-semibold);
   line-height: 1.15;
   letter-spacing: -0.03em;
   color: var(--mvv-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 .mvv-metric-foot {
@@ -757,10 +759,6 @@
 @media (max-width: 640px) {
   .mvv-metric {
     padding: var(--mvv-sp-3) var(--mvv-sp-4);
-  }
-
-  .mvv-metric-value {
-    font-size: var(--mvv-fs-22);
   }
 
   .mvv-metric-icon {
@@ -972,4 +970,143 @@
   margin-top: 4px;
   padding-top: 5px;
   border-top: 1px solid var(--mvv-border);
+}
+
+.mvv-chart-tooltip-note {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px solid var(--mvv-border);
+  color: var(--mvv-text-3);
+  font-size: var(--mvv-fs-11);
+  line-height: 1.4;
+  white-space: normal;
+}
+
+/* ================================================================ DataList / ListRow */
+
+.mvv-data-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mvv-list-row {
+  display: flex;
+  align-items: center;
+  gap: var(--mvv-sp-2);
+  min-width: 0;
+  padding-inline-end: var(--mvv-sp-3);
+}
+
+.mvv-list-row + .mvv-list-row {
+  border-top: 1px solid var(--mvv-border);
+}
+
+.mvv-list-row-main {
+  display: flex;
+  align-items: center;
+  gap: var(--mvv-sp-3);
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 56px;
+  margin: 0;
+  padding: 10px var(--mvv-sp-2) 10px var(--mvv-sp-5);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  text-decoration: none;
+}
+
+.mvv-list-row:not(:has(.mvv-list-row-action)) {
+  padding-inline-end: 0;
+}
+
+.mvv-list-row:not(:has(.mvv-list-row-action)) .mvv-list-row-main {
+  padding-inline-end: var(--mvv-sp-5);
+}
+
+.mvv-list-row-main[data-interactive] {
+  cursor: pointer;
+  transition: background-color var(--mvv-dur-fast) var(--mvv-ease);
+}
+
+.mvv-list-row:has(.mvv-list-row-main[data-interactive]:hover) {
+  background: var(--mvv-surface-hover);
+}
+
+.mvv-list-row-main[data-interactive]:active {
+  background: var(--mvv-surface-active);
+}
+
+.mvv-list-row-main[data-interactive]:focus-visible {
+  outline: 2px solid var(--mvv-focus-ring);
+  outline-offset: -2px;
+  border-radius: var(--mvv-r-sm);
+}
+
+.mvv-list-row[data-disabled] {
+  opacity: 0.55;
+}
+
+.mvv-list-row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: var(--mvv-text-2);
+}
+
+.mvv-list-row-icon > svg {
+  width: 18px;
+  height: 18px;
+}
+
+.mvv-list-row-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.mvv-list-row-title {
+  font-size: var(--mvv-fs-14);
+  font-weight: var(--mvv-fw-medium);
+  color: var(--mvv-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mvv-list-row-description {
+  font-size: var(--mvv-fs-12);
+  color: var(--mvv-text-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mvv-list-row-value {
+  flex: none;
+  font-size: var(--mvv-fs-14);
+  font-weight: var(--mvv-fw-medium);
+  color: var(--mvv-text);
+  text-align: end;
+}
+
+.mvv-list-row-action {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+@media (max-width: 640px) {
+  .mvv-list-row-main {
+    padding-inline-start: var(--mvv-sp-4);
+  }
+
+  .mvv-list-row:not(:has(.mvv-list-row-action)) .mvv-list-row-main {
+    padding-inline-end: var(--mvv-sp-4);
+  }
 }

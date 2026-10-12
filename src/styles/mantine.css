@@ -52,7 +52,8 @@
     transform 80ms var(--mvv-ease);
 }
 
-[data-mantine-color-scheme] .mvv-button:where([data-variant='filled']):where(:not(:disabled, [data-disabled])) {
+/* Mantine 9 sets no data-variant for the default (filled) button. */
+[data-mantine-color-scheme] .mvv-button:where(:not([data-variant]), [data-variant='filled']):where(:not(:disabled, [data-disabled])) {
   box-shadow:
     var(--mvv-button-highlight),
     0 1px 2px rgba(0, 0, 0, 0.12);
@@ -214,12 +215,22 @@
   border-color: var(--switch-color, var(--mvv-accent));
 }
 
+/* Thumb: light knob when off; on the checked track it takes the track's on-colour (dark knob on a near-white
+   zinc track in dark mode, white on coloured tracks). */
 [data-mantine-color-scheme] .mvv-switch-thumb {
+  --switch-thumb-bg: var(--mvv-switch-thumb);
   border: 0;
-  background: #ffffff;
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.2),
     0 0 0 0.5px rgba(0, 0, 0, 0.06);
+}
+
+[data-mantine-color-scheme] input:checked + * > .mvv-switch-thumb {
+  --switch-thumb-bg: var(--mvv-switch-on, var(--mvv-accent-contrast));
+}
+
+[data-mantine-color-scheme] input:is(:disabled, [data-disabled]) + * > .mvv-switch-thumb {
+  --switch-thumb-bg: var(--switch-thumb-bg-disabled);
 }
 
 [data-mantine-color-scheme] .mvv-checkbox-input,
@@ -719,4 +730,62 @@
   [data-mantine-color-scheme] .mvv-input-field {
     font-size: 16px;
   }
+}
+
+/* ---------------------------------------------------------------- Slider */
+
+/* Mark wrappers default to their label's width, which widens the track and overflows phones: pin them to the
+   mark size and let labels be max-content, centred; the first/last labels align to the track ends. */
+[data-mantine-color-scheme] .mvv-slider-mark-wrapper {
+  width: var(--slider-size);
+}
+
+[data-mantine-color-scheme] .mvv-slider-mark-label {
+  width: max-content;
+  font-size: var(--mvv-fs-12);
+  color: var(--mvv-text-3);
+  font-variant-numeric: tabular-nums;
+}
+
+[data-mantine-color-scheme] :where(.mvv-slider:not([data-orientation='vertical'])) .mvv-slider-mark-wrapper:first-child .mvv-slider-mark-label {
+  transform: translate(0, calc(var(--mantine-spacing-xs) / 2));
+}
+
+[data-mantine-color-scheme] :where(.mvv-slider:not([data-orientation='vertical'])) .mvv-slider-mark-wrapper:last-child .mvv-slider-mark-label {
+  transform: translate(calc(-100% + var(--slider-size)), calc(var(--mantine-spacing-xs) / 2));
+}
+
+[data-mantine-color-scheme] .mvv-slider-label {
+  background: var(--mvv-tooltip-bg);
+  color: var(--mvv-tooltip-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- Links */
+
+.mvv-link {
+  color: var(--mantine-color-anchor, var(--mvv-text));
+  text-decoration: none;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: color var(--mvv-dur-fast) var(--mvv-ease);
+}
+
+.mvv-link:hover {
+  text-decoration: underline;
+}
+
+.mvv-link:focus-visible {
+  outline: 2px solid var(--mvv-focus-ring);
+  outline-offset: 2px;
+}
+
+.mvv-link[data-subtle] {
+  color: var(--mvv-text-2);
+}
+
+.mvv-link[data-subtle]:hover {
+  color: var(--mvv-text);
 }

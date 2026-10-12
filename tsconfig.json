@@ -39,6 +39,9 @@
       ],
       "@mvv42/kit/vite": [
         "./src/vite.ts"
+      ],
+      "@mvv42/kit/testing": [
+        "./src/testing.tsx"
       ]
     }
   },

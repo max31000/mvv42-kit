@@ -41,6 +41,7 @@ PAGES = [
     ("charts", "/charts", "", USER, True),
     ("states", "/states", "", ANON, True),
     ("embedded", "/", "shell=1&accent=blue", USER, False),
+    ("components-zinc", "/components", "accent=zinc", USER, True),
 ]
 VIEWPORTS = [("1440", 1440, 900), ("390", 390, 844)]
 SCHEMES = ["light", "dark"]

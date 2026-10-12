@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 const dist = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 const FORBIDDEN = {
   'index.js': [/^react-router(-dom)?$/, /^recharts$/],
+  'testing.js': [/^react-router(-dom)?$/, /^recharts$/],
   'platform.js': [/^react-router(-dom)?$/, /^recharts$/, /^@mantine\//],
   'vite.js': [/^react(-dom)?(\/.*)?$/, /^@mantine\//, /^react-router(-dom)?$/, /^recharts$/],
 };

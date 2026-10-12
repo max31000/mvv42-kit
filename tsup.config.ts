@@ -7,6 +7,7 @@ export default defineConfig({
     platform: 'src/platform.ts',
     charts: 'src/charts.ts',
     vite: 'src/vite.ts',
+    testing: 'src/testing.tsx',
   },
   format: ['esm'],
   dts: true,
@@ -25,5 +26,6 @@ export default defineConfig({
     'react-router',
     'recharts',
     'vite',
+    /^@testing-library\//,
   ],
 });

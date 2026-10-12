@@ -100,6 +100,7 @@
   --mvv-surface-active: rgba(24, 24, 27, 0.08);
   --mvv-surface-raised: #ffffff;
   --mvv-input-bg: #ffffff;
+  --mvv-switch-thumb: #ffffff;
 
   --mvv-text: #18181b;
   --mvv-text-2: #52525b;
@@ -157,6 +158,7 @@
   --mvv-surface-active: rgba(250, 250, 250, 0.1);
   --mvv-surface-raised: #1d1d20;
   --mvv-input-bg: rgba(255, 255, 255, 0.025);
+  --mvv-switch-thumb: #e4e4e7;
 
   --mvv-text: #fafafa;
   --mvv-text-2: #a1a1aa;

@@ -34,6 +34,11 @@ export function StatesPage() {
         </Section>
       </SimpleGrid>
 
+      <MetricGrid cols={2}>
+        <Metric label="Длинное значение" value="12 345 678 901 ₽" delta={{ value: '+1,2%', tone: 'positive' }} />
+        <Metric label="Остаток долга" value="8 765 432,10 ₽" hint="на 1 ноября" />
+      </MetricGrid>
+
       <MetricGrid cols={3}>
         <Metric label="Остаток на счетах" value="—" loading />
         <Metric label="Свободный поток" value="—" loading />

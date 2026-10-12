@@ -7,6 +7,7 @@ import type { Mvv42User } from '../platform/types';
 import { cx } from './cx';
 import { IconBan, IconBrandTelegram, IconDeviceDesktop, IconLock, IconLogout, IconMoon, IconSun } from './icons';
 import { ErrorState } from './States';
+import { safeAvatarUrl } from './avatarUrl';
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -20,14 +21,15 @@ export interface UserAvatarProps {
   className?: string;
 }
 
-/** Telegram photo or initials, round, with a hairline ring. */
+/** Telegram photo (only trusted https Telegram hosts, see `safeAvatarUrl`) or initials, round, with a hairline ring. */
 export function UserAvatar({ user, size = 28, className }: UserAvatarProps) {
   const [broken, setBroken] = useState(false);
-  if (user.photoUrl && !broken) {
+  const photo = safeAvatarUrl(user.photoUrl);
+  if (photo && !broken) {
     return (
       <img
         className={cx('mvv-user-avatar', className)}
-        src={user.photoUrl}
+        src={photo}
         alt=""
         width={size}
         height={size}

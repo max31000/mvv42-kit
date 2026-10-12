@@ -27,3 +27,24 @@ jobs:
         run: npm run check:entries
       - run: npm pack --dry-run
       - run: npm run playground:build
+
+  size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - id: pack
+        run: echo "tgz=$PWD/$(npm pack --silent | tail -n1)" >> "$GITHUB_OUTPUT"
+      - name: Scratch app with only Mvv42Provider + Button
+        run: |
+          cp -r smoke "$RUNNER_TEMP/app"
+          cd "$RUNNER_TEMP/app"
+          npm install --no-audit --no-fund
+          npm install --no-audit --no-fund "@mvv42/kit@file:${{ steps.pack.outputs.tgz }}"
+          npx vite build --config vite.size.config.js
+          SIZE_BUDGET_KB=380 node check-size.mjs

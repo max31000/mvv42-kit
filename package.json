@@ -1,6 +1,6 @@
 {
   "name": "@mvv42/kit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "mvv42.ru design kit: Mantine theme, layout components, charts, platform client",
   "license": "MIT",
   "author": "Max Vodopianov",
@@ -43,6 +43,11 @@
       "import": "./dist/vite.js",
       "default": "./dist/vite.js"
     },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "default": "./dist/testing.js"
+    },
     "./styles.css": "./dist/styles.css",
     "./package.json": "./package.json"
   },
@@ -65,6 +70,7 @@
     "@mantine/dates": "^9.4.0",
     "@mantine/hooks": "^9.4.0",
     "@mantine/notifications": "^9.4.0",
+    "@testing-library/react": ">=16.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.0.0",
@@ -73,6 +79,9 @@
   },
   "peerDependenciesMeta": {
     "@mantine/dates": {
+      "optional": true
+    },
+    "@testing-library/react": {
       "optional": true
     },
     "react-router-dom": {

@@ -64,3 +64,21 @@ export function textColor(name: string, tuple: readonly string[], scheme: 'light
   }
   return { css: hex, hex };
 }
+
+/** Label colours offered on filled backgrounds. */
+export const ON_LIGHT = '#ffffff';
+export const ON_DARK = '#18181b';
+
+/**
+ * Label colour for a filled background: white while it keeps >= 3:1 (brand-coloured buttons stay white-on-colour),
+ * otherwise near-black — which then always has the higher contrast.
+ */
+export function onColor(fill: string): string {
+  return contrastRatio(ON_LIGHT, fill) >= 3 ? ON_LIGHT : ON_DARK;
+}
+
+/** Hex of a colour's filled shade per scheme (zinc is the neutral exception: 9 in light, 0 in dark). */
+export function filledHex(name: string, tuple: readonly string[], scheme: 'light' | 'dark'): string {
+  if (name === 'zinc') return scheme === 'light' ? tuple[9] : tuple[0];
+  return scheme === 'light' ? tuple[6] : tuple[5];
+}

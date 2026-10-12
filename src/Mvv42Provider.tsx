@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { MantineProvider, mergeThemeOverrides, type MantineThemeOverride } from '@mantine/core';
-import { Notifications } from '@mantine/notifications';
+import { Notifications, type NotificationsProps } from '@mantine/notifications';
 import { Mvv42Context, type Mvv42ContextValue } from './context';
 import { migrateLegacyColorScheme, mvv42ColorSchemeManager, removeLegacyAuthKeys } from './colorScheme/manager';
 import { isInsideShell } from './platform/shell';
@@ -18,6 +18,8 @@ export interface Mvv42ProviderProps {
   theme?: MantineThemeOverride;
   /** Force the embedded/standalone mode (playgrounds, tests). Detected automatically by default. */
   insideShell?: boolean;
+  /** Props for the rendered `<Notifications />` (position, limit, autoClose, zIndex, …), merged over the kit defaults. */
+  notifications?: Partial<NotificationsProps>;
   /** Props for `@mantine/core`'s `MantineProvider` `env` (use `'test'` in unit tests). */
   env?: 'default' | 'test';
   children?: ReactNode;
@@ -39,7 +41,7 @@ function startup(embedded: boolean) {
  * (READY / THEME / AUTH_CHANGED) and the kit context. Also removes legacy auth keys once on startup.
  * Does not render `ColorSchemeScript` — put `colorSchemeInlineScript` into `index.html` (`mvv42Html()`).
  */
-export function Mvv42Provider({ serviceId, accent, theme, insideShell, env, children }: Mvv42ProviderProps) {
+export function Mvv42Provider({ serviceId, accent, theme, insideShell, env, notifications, children }: Mvv42ProviderProps) {
   const [embedded] = useState(() => {
     const value = insideShell ?? isInsideShell();
     startup(value);
@@ -68,7 +70,7 @@ export function Mvv42Provider({ serviceId, accent, theme, insideShell, env, chil
     >
       <Mvv42Context.Provider value={ctx}>
         <ShellBridge serviceId={serviceId} />
-        <Notifications position={embedded ? 'top-center' : 'top-right'} limit={4} zIndex={400} />
+        <Notifications position={embedded ? 'top-center' : 'top-right'} limit={4} zIndex={400} {...notifications} />
         {children}
       </Mvv42Context.Provider>
     </MantineProvider>

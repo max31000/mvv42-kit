@@ -31,6 +31,8 @@ export interface ChartTooltipProps {
   labelFormatter?: (label: unknown) => ReactNode;
   /** Optional footer row, e.g. a total. */
   footer?: ChartTooltipRow;
+  /** Plain muted text under the rows (a caveat, a source). */
+  note?: ReactNode;
 }
 
 /**
@@ -46,12 +48,15 @@ export function ChartTooltip({
   valueFormatter,
   labelFormatter,
   footer,
+  note,
 }: ChartTooltipProps) {
   let resolvedRows = rows;
   let resolvedTitle = title;
   if (!resolvedRows) {
     if (active === false || !payload || payload.length === 0) return null;
-    resolvedRows = payload.map((entry) => {
+    resolvedRows = payload
+      .filter((entry) => entry.value !== null && entry.value !== undefined)
+      .map((entry) => {
       const name = String(entry.name ?? entry.dataKey ?? '');
       return {
         label: name,
@@ -59,6 +64,7 @@ export function ChartTooltip({
         color: entry.color ?? entry.stroke ?? entry.fill,
       };
     });
+    if (resolvedRows.length === 0) return null;
     if (resolvedTitle === undefined && label !== undefined && label !== null && label !== '') {
       resolvedTitle = labelFormatter ? labelFormatter(label) : String(label);
     }
@@ -81,6 +87,7 @@ export function ChartTooltip({
           <span className="mvv-chart-tooltip-value mvv-num">{footer.value}</span>
         </div>
       )}
+      {note != null && <div className="mvv-chart-tooltip-note">{note}</div>}
     </div>
   );
 }

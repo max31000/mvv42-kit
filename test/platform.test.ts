@@ -46,7 +46,7 @@ describe('refreshSession', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
       '/auth/api/refresh',
-      expect.objectContaining({ method: 'POST', credentials: 'same-origin', signal: expect.any(AbortSignal) }),
+      { method: 'POST', credentials: 'same-origin' },
     );
   });
 
@@ -319,5 +319,29 @@ describe('v0.1.1 review fixes', () => {
     await logout();
     expect(setItem).toHaveBeenCalledWith('mvv42-auth-event', expect.any(String));
     setItem.mockRestore();
+  });
+});
+
+describe('refresh timeout works with any fetch implementation (jsdom + undici)', () => {
+  beforeEach(() => vi.stubGlobal('navigator', { ...navigator, locks: undefined }));
+
+  it('never hands a foreign AbortSignal to fetch', async () => {
+    // Node's fetch rejects jsdom's AbortSignal ("Expected signal to be an instance of AbortSignal").
+    fetchMock.mockImplementation((_input, init) =>
+      init?.signal ? Promise.reject(new TypeError('Expected signal to be an instance of AbortSignal')) : Promise.resolve(new Response(null, { status: 200 })),
+    );
+    await expect(refreshSession()).resolves.toBe(true);
+  });
+
+  it('gives up after 10 s when the server never answers', async () => {
+    vi.useFakeTimers();
+    try {
+      fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+      const result = refreshSession();
+      await vi.advanceTimersByTimeAsync(10_000);
+      await expect(result).resolves.toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

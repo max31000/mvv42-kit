@@ -18,6 +18,7 @@ import {
   Select,
   SimpleGrid,
   Skeleton,
+  Slider,
   Stack,
   Switch,
   Tabs,
@@ -31,6 +32,9 @@ import { MonthPickerInput } from '@mantine/dates';
 import { notifications } from '@mantine/notifications';
 import {
   IconAlertTriangle,
+  IconBuildingBank,
+  IconCash,
+  IconWallet,
   IconCheck,
   IconCircleCheck,
   IconDots,
@@ -41,7 +45,7 @@ import {
   IconTrash,
   IconX,
 } from '@tabler/icons-react';
-import { Page, Section } from '@mvv42/kit';
+import { DataList, ListRow, Page, Section, TextLink } from '@mvv42/kit';
 
 export function ComponentsPage() {
   const [opened, setOpened] = useState(false);
@@ -112,10 +116,49 @@ export function ComponentsPage() {
             <Checkbox label="Показывать погашенные" />
           </Stack>
         </SimpleGrid>
+        <Slider
+          mt="lg"
+          mb="xl"
+          defaultValue={30}
+          label={(v) => `${v} лет`}
+          marks={[
+            { value: 0, label: '0 лет' },
+            { value: 50, label: '15 лет' },
+            { value: 100, label: '30 лет' },
+          ]}
+        />
         <Group mt="lg" gap="xs">
           <SegmentedControl data={['День', 'Неделя', 'Месяц', 'Год']} defaultValue="Месяц" />
           <SegmentedControl color="violet" data={['Аннуитет', 'Дифф.']} defaultValue="Аннуитет" />
         </Group>
+      </Section>
+
+      <Section title="Списки и ссылки" description="DataList + ListRow внутри Section padding=&quot;none&quot;; TextLink для ссылок в тексте" padding="none">
+        <DataList aria-label="Счета">
+          <ListRow
+            icon={<IconBuildingBank stroke={1.75} />}
+            title="Т-Банк · Брокерский"
+            description="Обновлено сегодня в 09:40"
+            value="1 284 560 ₽"
+            onClick={() => undefined}
+          />
+          <ListRow
+            icon={<IconWallet stroke={1.75} />}
+            title="Сбер · ИИС"
+            description="3 позиции"
+            value="412 000 ₽"
+            href="#iis"
+            action={
+              <ActionIcon aria-label="Ещё">
+                <IconDots size={18} stroke={1.75} />
+              </ActionIcon>
+            }
+          />
+          <ListRow icon={<IconCash stroke={1.75} />} title="Наличные" description="Без синхронизации" value="50 000 ₽" />
+        </DataList>
+        <Text size="sm" px={20} py={16} c="dimmed">
+          Подробнее — в <TextLink href="#docs">документации</TextLink> или <TextLink href="#faq" subtle>частых вопросах</TextLink>.
+        </Text>
       </Section>
 
       <Section title="Бейджи и статусы" description="Без капслока; цвет — только для смысла">

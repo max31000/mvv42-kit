@@ -12,8 +12,17 @@ export const AUTH_STORAGE_EVENT_KEY = 'mvv42-auth-event';
 /** Upper bound for POST /auth/api/refresh. */
 const REFRESH_TIMEOUT_MS = 10_000;
 
-function timeoutSignal(ms: number): AbortSignal | undefined {
-  return typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(ms) : undefined;
+/**
+ * Resolves `fallback` if `promise` has not settled within `ms`. A timer race instead of an AbortSignal: under
+ * Vitest + jsdom the global AbortSignal is jsdom's and Node's fetch rejects it, which would make every refresh
+ * fail in consumer tests.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((resolve) => {
+    timer = setTimeout(() => resolve(fallback), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 /** Tells other same-origin documents that the session changed (logout, login elsewhere). */
@@ -71,13 +80,13 @@ let refreshInFlight: Promise<boolean> | null = null;
 export function refreshSession(): Promise<boolean> {
   if (!refreshInFlight) {
     const run = (): Promise<boolean> =>
-      fetch(`${AUTH_API}/refresh`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        signal: timeoutSignal(REFRESH_TIMEOUT_MS),
-      }).then(
-        (r) => r.ok,
-        () => false,
+      withTimeout(
+        fetch(`${AUTH_API}/refresh`, { method: 'POST', credentials: 'same-origin' }).then(
+          (r) => r.ok,
+          () => false,
+        ),
+        REFRESH_TIMEOUT_MS,
+        false,
       );
     const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
     let attempt: Promise<boolean>;

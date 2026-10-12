@@ -1,5 +1,5 @@
 import type { CSSVariablesResolver, MantineTheme } from '@mantine/core';
-import { textColor } from './contrast';
+import { filledHex, onColor, textColor } from './contrast';
 
 /** Colours whose variant variables the kit re-tunes (everything but the `dark` surface scale). */
 function tunableColors(theme: MantineTheme): string[] {
@@ -39,6 +39,8 @@ export const mvv42CssVariablesResolver: CSSVariablesResolver = (theme) => {
     const dt = textColor(name, tuple, 'dark').css;
     const base = `var(--mantine-color-${name}-6)`;
     const darkBase = `var(--mantine-color-${name}-5)`;
+    light[`--mvv-on-${name}`] = onColor(filledHex(name, tuple, 'light'));
+    dark[`--mvv-on-${name}`] = onColor(filledHex(name, tuple, 'dark'));
     Object.assign(light, {
       [`--mantine-color-${name}-text`]: lt,
       [`--mantine-color-${name}-light`]: `color-mix(in srgb, ${base} 11%, transparent)`,
@@ -73,7 +75,21 @@ export const mvv42CssVariablesResolver: CSSVariablesResolver = (theme) => {
     '--mantine-color-gray-outline': 'var(--mvv-text-2)',
   });
 
+  // Neutral zinc fills are ink-coloured: #18181b on light, #fafafa on dark.
+  if (theme.colors.zinc) {
+    Object.assign(light, {
+      '--mantine-color-zinc-filled': 'var(--mantine-color-zinc-9)',
+      '--mantine-color-zinc-filled-hover': 'var(--mantine-color-zinc-8)',
+    });
+    Object.assign(dark, {
+      '--mantine-color-zinc-filled': 'var(--mantine-color-zinc-0)',
+      '--mantine-color-zinc-filled-hover': 'var(--mantine-color-zinc-2)',
+    });
+  }
+
   const primary = theme.primaryColor;
+  light['--mantine-primary-color-contrast'] = `var(--mvv-on-${primary})`;
+  dark['--mantine-primary-color-contrast'] = `var(--mvv-on-${primary})`;
   if (primary === 'zinc') {
     // Neutral accent: links read as text with an underline, not as a colour.
     light['--mantine-color-anchor'] = 'var(--mvv-text)';
@@ -87,7 +103,7 @@ export const mvv42CssVariablesResolver: CSSVariablesResolver = (theme) => {
     variables: {
       '--mvv-accent': 'var(--mantine-primary-color-filled)',
       '--mvv-accent-hover': 'var(--mantine-primary-color-filled-hover)',
-      '--mvv-accent-contrast': 'var(--mantine-primary-color-contrast)',
+      '--mvv-accent-contrast': `var(--mvv-on-${primary})`,
       '--mvv-accent-text': `var(--mantine-color-${primary}-text)`,
     },
     light,
