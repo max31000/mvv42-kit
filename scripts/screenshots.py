@@ -22,9 +22,9 @@ OUT = ROOT / "docs" / "screenshots"
 USER = {
     "user": {
         "id": 1,
-        "telegramId": 343631124,
-        "name": "Максим Водопьянов",
-        "username": "mvv42",
+        "telegramId": 100000001,
+        "name": "Мария Волкова",
+        "username": "demo",
         "photoUrl": None,
         "isAdmin": True,
         "isOwner": True,
