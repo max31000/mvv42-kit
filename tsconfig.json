@@ -1,0 +1,52 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "verbatimModuleSyntax": false,
+    "types": [
+      "node",
+      "vitest/globals",
+      "@testing-library/jest-dom"
+    ],
+    "noEmit": true,
+    "paths": {
+      "@mvv42/kit": [
+        "./src/index.ts"
+      ],
+      "@mvv42/kit/router": [
+        "./src/router.ts"
+      ],
+      "@mvv42/kit/platform": [
+        "./src/platform.ts"
+      ],
+      "@mvv42/kit/charts": [
+        "./src/charts.ts"
+      ],
+      "@mvv42/kit/vite": [
+        "./src/vite.ts"
+      ]
+    }
+  },
+  "include": [
+    "src",
+    "test",
+    "playground",
+    "tsup.config.ts",
+    "vitest.config.ts"
+  ]
+}

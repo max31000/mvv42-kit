@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.tgz
+playground/dist/
+coverage/
+.vite/
+*.log
+__pycache__/

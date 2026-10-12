@@ -1,0 +1,210 @@
+/*
+ * @mvv42/kit — design tokens.
+ * Single source of truth for colour, type, spacing, radius, shadow and motion across mvv42.ru.
+ * Light/dark follow Mantine's `data-mantine-color-scheme` attribute on <html> (set before first paint by
+ * `colorSchemeInlineScript`). Every token is prefixed `--mvv-`; Mantine's own variables are remapped onto
+ * these by the theme's `cssVariablesResolver`.
+ */
+
+:root {
+  /* ---------- Typography ---------- */
+  --mvv-font-sans: -apple-system, BlinkMacSystemFont, 'Inter Variable', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --mvv-font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
+
+  --mvv-fs-11: 0.6875rem;
+  --mvv-fs-12: 0.75rem;
+  --mvv-fs-13: 0.8125rem;
+  --mvv-fs-14: 0.875rem;
+  --mvv-fs-15: 0.9375rem;
+  --mvv-fs-17: 1.0625rem;
+  --mvv-fs-22: 1.375rem;
+  --mvv-fs-28: 1.75rem;
+  --mvv-fs-34: 2.125rem;
+  --mvv-fs-56: 3.5rem;
+
+  --mvv-lh-tight: 1.1;
+  --mvv-lh-snug: 1.3;
+  --mvv-lh-body: 1.5;
+
+  --mvv-tracking-display: -0.035em;
+  --mvv-tracking-title: -0.02em;
+  --mvv-tracking-body: -0.006em;
+
+  --mvv-fw-regular: 400;
+  --mvv-fw-medium: 500;
+  --mvv-fw-semibold: 600;
+  --mvv-fw-bold: 700;
+
+  /* ---------- Spacing (4px grid) ---------- */
+  --mvv-sp-1: 4px;
+  --mvv-sp-2: 8px;
+  --mvv-sp-3: 12px;
+  --mvv-sp-4: 16px;
+  --mvv-sp-5: 20px;
+  --mvv-sp-6: 24px;
+  --mvv-sp-8: 32px;
+  --mvv-sp-10: 40px;
+  --mvv-sp-12: 48px;
+  --mvv-sp-16: 64px;
+  --mvv-sp-24: 96px;
+
+  /* ---------- Radii ---------- */
+  --mvv-r-xs: 6px;
+  --mvv-r-sm: 8px;
+  --mvv-r-md: 12px;
+  --mvv-r-lg: 16px;
+  --mvv-r-xl: 20px;
+  --mvv-r-full: 999px;
+
+  /* ---------- Layout ---------- */
+  --mvv-topbar-h: 52px;
+  --mvv-subnav-h: 44px;
+  --mvv-content-max: 1080px;
+  --mvv-content-wide: 1360px;
+  --mvv-gutter: var(--mvv-sp-8);
+
+  /* ---------- Motion ---------- */
+  --mvv-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --mvv-dur-fast: 140ms;
+  --mvv-dur-base: 200ms;
+  --mvv-dur-slow: 260ms;
+
+  /* ---------- Layers ---------- */
+  --mvv-z-header: 100;
+  --mvv-z-popover: 300;
+  --mvv-z-modal: 200;
+  --mvv-z-toast: 400;
+
+  /* ---------- Accent (the service's primary colour; resolved by the Mantine theme) ---------- */
+  --mvv-accent: var(--mantine-primary-color-filled, #18181b);
+  --mvv-accent-hover: var(--mantine-primary-color-filled-hover, #27272a);
+  --mvv-accent-contrast: var(--mantine-primary-color-contrast, #ffffff);
+  --mvv-accent-soft: color-mix(in srgb, var(--mvv-accent) 12%, transparent);
+}
+
+@media (max-width: 640px) {
+  :root {
+    --mvv-gutter: var(--mvv-sp-4);
+  }
+}
+
+/* ---------- Light ---------- */
+:root,
+:root[data-mantine-color-scheme='light'] {
+  color-scheme: light;
+
+  --mvv-bg: #fafafa;
+  --mvv-surface: #ffffff;
+  --mvv-surface-2: #f4f4f5;
+  --mvv-surface-hover: rgba(24, 24, 27, 0.045);
+  --mvv-surface-active: rgba(24, 24, 27, 0.08);
+  --mvv-surface-raised: #ffffff;
+  --mvv-input-bg: #ffffff;
+
+  --mvv-text: #18181b;
+  --mvv-text-2: #52525b;
+  --mvv-text-3: #71717a;
+
+  --mvv-border: rgba(24, 24, 27, 0.08);
+  --mvv-border-strong: rgba(24, 24, 27, 0.15);
+  --mvv-focus-ring: rgba(24, 24, 27, 0.55);
+
+  --mvv-header-bg: rgba(250, 250, 250, 0.78);
+  --mvv-scrim: rgba(9, 9, 11, 0.32);
+  --mvv-tooltip-bg: #18181b;
+  --mvv-tooltip-text: #fafafa;
+  --mvv-stripe: rgba(24, 24, 27, 0.022);
+
+  /* Status — text-safe (>= 4.5:1 on surface); `-bg` are soft fills for banners and chips. */
+  --mvv-success: #15803d;
+  --mvv-warning: #b45309;
+  --mvv-danger: #dc2626;
+  --mvv-info: #2563eb;
+  --mvv-success-bg: #f0fdf4;
+  --mvv-warning-bg: #fffbeb;
+  --mvv-danger-bg: #fef2f2;
+  --mvv-info-bg: #eff6ff;
+
+  /* Categorical chart palette — fixed order, validated (CVD ΔE ≥ 8 adjacent, ≥ 3:1 on #fff). */
+  --mvv-chart-1: #2a78d6;
+  --mvv-chart-2: #e5602b;
+  --mvv-chart-3: #16a574;
+  --mvv-chart-4: #c78300;
+  --mvv-chart-5: #d6588a;
+  --mvv-chart-6: #008300;
+  --mvv-chart-7: #4a3aa7;
+  --mvv-chart-8: #dc3f3e;
+
+  --mvv-shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.03);
+  --mvv-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 1px rgba(0, 0, 0, 0.02);
+  --mvv-shadow-md: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.04),
+    0 16px 32px -12px rgba(0, 0, 0, 0.1);
+  --mvv-shadow-lg: 0 2px 4px rgba(0, 0, 0, 0.04), 0 12px 24px rgba(0, 0, 0, 0.06),
+    0 32px 64px -16px rgba(0, 0, 0, 0.16);
+
+  --mvv-tile-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.28), inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+  --mvv-button-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+/* ---------- Dark ---------- */
+:root[data-mantine-color-scheme='dark'] {
+  color-scheme: dark;
+
+  --mvv-bg: #0b0b0c;
+  --mvv-surface: #161618;
+  --mvv-surface-2: #1d1d20;
+  --mvv-surface-hover: rgba(250, 250, 250, 0.06);
+  --mvv-surface-active: rgba(250, 250, 250, 0.1);
+  --mvv-surface-raised: #1d1d20;
+  --mvv-input-bg: rgba(255, 255, 255, 0.025);
+
+  --mvv-text: #fafafa;
+  --mvv-text-2: #a1a1aa;
+  --mvv-text-3: #8b8b94;
+
+  --mvv-border: rgba(255, 255, 255, 0.08);
+  --mvv-border-strong: rgba(255, 255, 255, 0.15);
+  --mvv-focus-ring: rgba(250, 250, 250, 0.6);
+
+  --mvv-header-bg: rgba(11, 11, 12, 0.72);
+  --mvv-scrim: rgba(0, 0, 0, 0.6);
+  --mvv-tooltip-bg: #2a2a2e;
+  --mvv-tooltip-text: #fafafa;
+  --mvv-stripe: rgba(255, 255, 255, 0.018);
+
+  --mvv-success: #4ade80;
+  --mvv-warning: #fbbf24;
+  --mvv-danger: #f87171;
+  --mvv-info: #60a5fa;
+  --mvv-success-bg: rgba(74, 222, 128, 0.1);
+  --mvv-warning-bg: rgba(251, 191, 36, 0.1);
+  --mvv-danger-bg: rgba(248, 113, 113, 0.1);
+  --mvv-info-bg: rgba(96, 165, 250, 0.1);
+
+  --mvv-chart-1: #3987e5;
+  --mvv-chart-2: #d95926;
+  --mvv-chart-3: #199e70;
+  --mvv-chart-4: #c98500;
+  --mvv-chart-5: #d55181;
+  --mvv-chart-6: #008300;
+  --mvv-chart-7: #9085e9;
+  --mvv-chart-8: #e66767;
+
+  --mvv-shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.3);
+  --mvv-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --mvv-shadow-md: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 2px rgba(0, 0, 0, 0.5),
+    0 16px 32px -12px rgba(0, 0, 0, 0.6);
+  --mvv-shadow-lg: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 2px 4px rgba(0, 0, 0, 0.4),
+    0 32px 64px -16px rgba(0, 0, 0, 0.7);
+
+  --mvv-tile-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --mvv-button-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --mvv-dur-fast: 0ms;
+    --mvv-dur-base: 0ms;
+    --mvv-dur-slow: 0ms;
+  }
+}
