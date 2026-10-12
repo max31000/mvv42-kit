@@ -44,7 +44,10 @@ describe('refreshSession', () => {
     d.resolve(new Response(null, { status: 204 }));
     await expect(a).resolves.toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('/auth/api/refresh', { method: 'POST', credentials: 'same-origin' });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/auth/api/refresh',
+      expect.objectContaining({ method: 'POST', credentials: 'same-origin', signal: expect.any(AbortSignal) }),
+    );
   });
 
   it('runs under the mvv42-refresh Web Lock when available', async () => {
@@ -68,6 +71,15 @@ describe('refreshSession', () => {
     await refreshSession();
     await refreshSession();
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('falls back to a plain refresh when locks.request throws synchronously', async () => {
+    const request = vi.fn(() => {
+      throw new Error('SecurityError');
+    });
+    vi.stubGlobal('navigator', { ...navigator, locks: { request } });
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }));
+    await expect(refreshSession()).resolves.toBe(true);
   });
 
   it('treats a network error as failure', async () => {
@@ -252,6 +264,60 @@ describe('shell protocol', () => {
   it('safeReturnPath collapses protocol-relative paths', () => {
     expect(safeReturnPath('//evil.example/x')).toBe('/evil.example/x');
     expect(safeReturnPath('/bonds/positions?x=1#h')).toBe('/bonds/positions?x=1#h');
-    expect(safeReturnPath('/\\evil')).toBe('/');
+    expect(safeReturnPath('/\\evil')).toBe('/evil');
+    expect(safeReturnPath('\\/\\evil.example')).toBe('/evil.example');
+    expect(safeReturnPath('/bonds/a\\b?q=c\\d')).toBe('/bonds/a\\b?q=c\\d');
+  });
+});
+
+describe('v0.1.1 review fixes', () => {
+  beforeEach(() => vi.stubGlobal('navigator', { ...navigator, locks: undefined }));
+
+  it('apiJson: a non-JSON 2xx body throws ApiError invalid_json', async () => {
+    fetchMock.mockResolvedValueOnce(new Response('<html>spa fallback</html>', { status: 200 }));
+    const err = await apiJson('/api/x').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err).toMatchObject({ status: 200, code: 'invalid_json' });
+  });
+
+  it('apiJson keeps headers of a Request input and adds Accept', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, {}));
+    await apiJson(new Request('http://localhost/api/x', { headers: { 'X-Trace': 'abc' } }));
+    const headers = fetchMock.mock.calls[0][1]?.headers as Headers;
+    expect(headers.get('X-Trace')).toBe('abc');
+    expect(headers.get('Accept')).toBe('application/json');
+  });
+
+  it('mvv42Fetch does not override the credentials of a Request input', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(200, {}));
+    const req = new Request('http://localhost/api/x', { credentials: 'include' });
+    await mvv42Fetch(req);
+    expect(fetchMock.mock.calls[0][1]?.credentials).toBeUndefined();
+  });
+
+  it('logout broadcasts to other documents', async () => {
+    const posted: unknown[] = [];
+    class FakeChannel {
+      constructor(public name: string) {}
+      postMessage(m: unknown) {
+        posted.push([this.name, m]);
+      }
+      close() {}
+      addEventListener() {}
+      removeEventListener() {}
+    }
+    vi.stubGlobal('BroadcastChannel', FakeChannel);
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await logout();
+    expect(posted).toEqual([['mvv42-auth', { type: 'AUTH_CHANGED' }]]);
+  });
+
+  it('logout falls back to a storage ping without BroadcastChannel', async () => {
+    vi.stubGlobal('BroadcastChannel', undefined);
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await logout();
+    expect(setItem).toHaveBeenCalledWith('mvv42-auth-event', expect.any(String));
+    setItem.mockRestore();
   });
 });

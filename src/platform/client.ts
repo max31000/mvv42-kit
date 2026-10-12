@@ -5,6 +5,61 @@ export const AUTH_API = '/auth/api';
 
 /** Fired on `window` after a local logout so `useMe` instances re-read `/me`. */
 export const AUTH_CHANGED_EVENT = 'mvv42:auth-changed';
+/** BroadcastChannel that tells other same-origin documents (tabs, iframes) that the session changed. */
+export const AUTH_CHANNEL = 'mvv42-auth';
+/** localStorage key pinged when BroadcastChannel is unavailable (the `storage` event reaches other documents). */
+export const AUTH_STORAGE_EVENT_KEY = 'mvv42-auth-event';
+/** Upper bound for POST /auth/api/refresh. */
+const REFRESH_TIMEOUT_MS = 10_000;
+
+function timeoutSignal(ms: number): AbortSignal | undefined {
+  return typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function' ? AbortSignal.timeout(ms) : undefined;
+}
+
+/** Tells other same-origin documents that the session changed (logout, login elsewhere). */
+export function broadcastAuthChanged(): void {
+  try {
+    if (typeof BroadcastChannel === 'function') {
+      const channel = new BroadcastChannel(AUTH_CHANNEL);
+      channel.postMessage({ type: 'AUTH_CHANGED' });
+      channel.close();
+      return;
+    }
+  } catch {
+    /* fall through to storage */
+  }
+  try {
+    localStorage.setItem(AUTH_STORAGE_EVENT_KEY, String(Date.now()));
+    localStorage.removeItem(AUTH_STORAGE_EVENT_KEY);
+  } catch {
+    /* storage blocked */
+  }
+}
+
+/** Subscribes to `broadcastAuthChanged` from other documents. Returns an unsubscribe function. */
+export function onAuthBroadcast(handler: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const offs: Array<() => void> = [];
+  try {
+    if (typeof BroadcastChannel === 'function') {
+      const channel = new BroadcastChannel(AUTH_CHANNEL);
+      const listener = () => handler();
+      channel.addEventListener('message', listener);
+      offs.push(() => {
+        channel.removeEventListener('message', listener);
+        channel.close();
+      });
+    }
+  } catch {
+    /* ignore */
+  }
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === AUTH_STORAGE_EVENT_KEY && event.newValue) handler();
+  };
+  window.addEventListener('storage', onStorage);
+  offs.push(() => window.removeEventListener('storage', onStorage));
+  return () => offs.forEach((off) => off());
+}
 
 let refreshInFlight: Promise<boolean> | null = null;
 
@@ -16,15 +71,28 @@ let refreshInFlight: Promise<boolean> | null = null;
 export function refreshSession(): Promise<boolean> {
   if (!refreshInFlight) {
     const run = (): Promise<boolean> =>
-      fetch(`${AUTH_API}/refresh`, { method: 'POST', credentials: 'same-origin' }).then(
+      fetch(`${AUTH_API}/refresh`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        signal: timeoutSignal(REFRESH_TIMEOUT_MS),
+      }).then(
         (r) => r.ok,
         () => false,
       );
     const locks = typeof navigator !== 'undefined' ? navigator.locks : undefined;
-    const attempt: Promise<boolean> =
-      locks && typeof locks.request === 'function'
-        ? Promise.resolve(locks.request('mvv42-refresh', run)).then((ok) => Boolean(ok), () => run())
-        : run();
+    let attempt: Promise<boolean>;
+    if (locks && typeof locks.request === 'function') {
+      try {
+        attempt = Promise.resolve(locks.request('mvv42-refresh', run)).then(
+          (ok) => Boolean(ok),
+          () => run(),
+        );
+      } catch {
+        attempt = run();
+      }
+    } else {
+      attempt = run();
+    }
     refreshInFlight = attempt.finally(() => {
       refreshInFlight = null;
     });
@@ -38,8 +106,10 @@ export function refreshSession(): Promise<boolean> {
  * re-sendable (string, FormData, Blob, URLSearchParams or a `Request` — not a one-shot stream).
  */
 export async function mvv42Fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const retryInput = input instanceof Request ? input.clone() : input;
-  const options: RequestInit = { credentials: 'same-origin', ...init };
+  const isRequest = typeof Request !== 'undefined' && input instanceof Request;
+  const retryInput = isRequest ? (input as Request).clone() : input;
+  // A Request carries its own credentials/headers; only plain URLs get the same-origin default.
+  const options: RequestInit | undefined = isRequest ? init : { credentials: 'same-origin', ...init };
 
   const response = await fetch(input, options);
   if (response.status !== 401) return response;
@@ -63,7 +133,9 @@ async function errorCode(response: Response): Promise<string | null> {
  * resolves `undefined` for 204/empty bodies. A string body gets `Content-Type: application/json` unless set.
  */
 export async function apiJson<T = unknown>(input: RequestInfo | URL, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers);
+  const isRequest = typeof Request !== 'undefined' && input instanceof Request;
+  const headers = new Headers(isRequest ? (input as Request).headers : undefined);
+  new Headers(init?.headers).forEach((value, key) => headers.set(key, value));
   if (!headers.has('Accept')) headers.set('Accept', 'application/json');
   if (typeof init?.body === 'string' && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json');
 
@@ -74,7 +146,12 @@ export async function apiJson<T = unknown>(input: RequestInfo | URL, init?: Requ
   }
   if (response.status === 204) return undefined as T;
   const text = await response.text();
-  return (text ? JSON.parse(text) : undefined) as T;
+  if (!text) return undefined as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new ApiError(response.status, 'invalid_json', 'Сервер вернул не JSON');
+  }
 }
 
 /**
@@ -94,12 +171,11 @@ export async function getMe(): Promise<Me | null> {
 }
 
 /**
- * The shell accepts a same-origin path starting with `/` but not `//` or `/\`: leading slashes collapse to
- * one; anything with a backslash falls back to `/`.
+ * The shell accepts a same-origin path starting with `/` but not `//` or `/\`: any leading run of slashes and
+ * backslashes collapses to a single `/`, so the path can never read as protocol-relative. The rest is kept.
  */
 export function safeReturnPath(path: string): string {
-  if (path.includes('\\')) return '/';
-  return '/' + path.replace(/^\/+/, '');
+  return '/' + path.replace(/^[\\/]+/, '');
 }
 
 /** Login UI lives in the shell: inside it, ask the shell; standalone, go to `/?login=1&return=<path>`. */
@@ -117,6 +193,7 @@ export async function logout(): Promise<void> {
     /* offline — cookies stay; /me re-read will show the truth */
   }
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
+  broadcastAuthChanged();
 }
 
 /** Test hook: forget an in-flight refresh. */

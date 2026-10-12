@@ -28,8 +28,8 @@ function ShellBridge({ serviceId }: { serviceId: string }) {
   return null;
 }
 
-function startup() {
-  migrateLegacyColorScheme();
+function startup(embedded: boolean) {
+  migrateLegacyColorScheme({ embedded });
   removeLegacyAuthKeys();
 }
 
@@ -40,9 +40,12 @@ function startup() {
  * Does not render `ColorSchemeScript` — put `colorSchemeInlineScript` into `index.html` (`mvv42Html()`).
  */
 export function Mvv42Provider({ serviceId, accent, theme, insideShell, env, children }: Mvv42ProviderProps) {
-  useState(startup);
+  const [embedded] = useState(() => {
+    const value = insideShell ?? isInsideShell();
+    startup(value);
+    return value;
+  });
   const resolvedAccent: Mvv42Accent = isMvv42Accent(accent) ? accent : 'zinc';
-  const [embedded] = useState(() => insideShell ?? isInsideShell());
   const [manager] = useState(() => mvv42ColorSchemeManager({ embedded }));
 
   const mergedTheme = useMemo(() => {

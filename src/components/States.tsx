@@ -35,6 +35,8 @@ export interface ErrorStateProps extends Omit<HTMLAttributes<HTMLDivElement>, 't
   error?: unknown;
   /** Shows «Повторить». */
   onRetry?: () => void;
+  /** Shows the retry button as busy (e.g. while re-fetching). */
+  retrying?: boolean;
   compact?: boolean;
 }
 
@@ -55,7 +57,7 @@ const STATUS_TEXT: Record<number, { title: string; description: string }> = {
 };
 
 /** Failed load: what happened, a technical hint and «Повторить». Knows 401/403/404 from `ApiError`. */
-export function ErrorState({ title, error, onRetry, compact, className, ...rest }: ErrorStateProps) {
+export function ErrorState({ title, error, onRetry, retrying, compact, className, ...rest }: ErrorStateProps) {
   const { status, message, detail } = describe(error);
   const known = status != null ? STATUS_TEXT[status] : undefined;
   const denied = status === 403 || status === 401;
@@ -71,7 +73,7 @@ export function ErrorState({ title, error, onRetry, compact, className, ...rest 
       {detail && <code className="mvv-state-detail">{detail}</code>}
       {onRetry && (
         <div className="mvv-state-action">
-          <Button variant="default" leftSection={<IconRefresh size={16} />} onClick={onRetry}>
+          <Button variant="default" leftSection={<IconRefresh size={16} />} onClick={onRetry} loading={retrying}>
             Повторить
           </Button>
         </div>

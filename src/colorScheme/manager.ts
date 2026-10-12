@@ -10,12 +10,18 @@ function storage(): Storage | null {
   }
 }
 
+export interface MigrateLegacyColorSchemeOptions {
+  /** Inside the shell nothing is migrated: the shell owns the setting. Defaults to `isInsideShell()`. */
+  embedded?: boolean;
+}
+
 /**
- * One-time migration of legacy colour-scheme keys into `mvv42-color-scheme` (only if the new key is absent):
- * `mantine-color-scheme-value` (Mantine default key; removed afterwards) and `cashpulse-settings.colorScheme`
- * (zustand-persist JSON; the settings object itself is left alone). Idempotent.
+ * Copies a legacy colour-scheme value into `mvv42-color-scheme` when the new key is absent:
+ * `mantine-color-scheme-value` (Mantine's default key), then `cashpulse-settings.colorScheme` (zustand-persist
+ * JSON). Legacy keys are never removed (older frontends may still read them). Skipped inside the shell.
  */
-export function migrateLegacyColorScheme(): void {
+export function migrateLegacyColorScheme(options: MigrateLegacyColorSchemeOptions = {}): void {
+  if (options.embedded ?? isInsideShell()) return;
   const s = storage();
   if (!s) return;
   try {
@@ -37,7 +43,6 @@ export function migrateLegacyColorScheme(): void {
       }
       if (migrated) s.setItem(COLOR_SCHEME_KEY, migrated);
     }
-    if (legacyMantine !== null) s.removeItem('mantine-color-scheme-value');
   } catch {
     /* storage blocked */
   }
@@ -77,7 +82,7 @@ export function mvv42ColorSchemeManager(options: Mvv42ColorSchemeManagerOptions 
 
   return {
     get(defaultValue: MantineColorScheme): MantineColorScheme {
-      migrateLegacyColorScheme();
+      migrateLegacyColorScheme({ embedded: embedded() });
       const s = storage();
       try {
         const value = s?.getItem(COLOR_SCHEME_KEY);

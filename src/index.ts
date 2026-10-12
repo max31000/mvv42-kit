@@ -11,7 +11,7 @@ export { contrastRatio } from './theme/contrast';
 export { tokens } from './tokens';
 
 export { COLOR_SCHEME_KEY, LEGACY_AUTH_KEYS, LEGACY_COLOR_SCHEME_KEYS } from './colorScheme/constants';
-export { colorSchemeInlineScript } from './colorScheme/inline';
+export { colorSchemeInlineScript, colorSchemeInlineScriptSha256 } from './colorScheme/inline';
 export { migrateLegacyColorScheme, mvv42ColorSchemeManager, removeLegacyAuthKeys } from './colorScheme/manager';
 
 export { Mvv42Provider } from './Mvv42Provider';

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Button, Loader, Menu, Skeleton, UnstyledButton, useMantineColorScheme } from '@mantine/core';
 import { useInsideShell, useMvv42Context } from '../context';
 import { logout, requestLogin } from '../platform/client';
@@ -126,6 +126,23 @@ export interface LoginRequiredProps {
 export function LoginRequired({ title, description, children }: LoginRequiredProps) {
   const { serviceId } = useMvv42Context();
   const { user, loading, status, app, refresh } = useMe();
+  const [retrying, setRetrying] = useState(false);
+  const access = user ? app(serviceId) : undefined;
+  const missing = Boolean(user) && !access;
+
+  useEffect(() => {
+    if (missing) {
+      console.warn(
+        `[@mvv42/kit] LoginRequired: service "${serviceId}" is not listed in /auth/api/me — treating it as not granted. ` +
+          'Check the serviceId passed to Mvv42Provider and the auth registry.',
+      );
+    }
+  }, [missing, serviceId]);
+
+  const retry = () => {
+    setRetrying(true);
+    void refresh().finally(() => setRetrying(false));
+  };
 
   if (loading) {
     return (
@@ -141,7 +158,8 @@ export function LoginRequired({ title, description, children }: LoginRequiredPro
           className="mvv-gate-card"
           title="Сервис входа недоступен"
           error="Не получилось проверить вход. Попробуйте ещё раз через минуту."
-          onRetry={() => void refresh()}
+          onRetry={retry}
+          retrying={retrying}
         />
       </div>
     );
@@ -164,8 +182,7 @@ export function LoginRequired({ title, description, children }: LoginRequiredPro
       </div>
     );
   }
-  const access = app(serviceId);
-  if (access && !access.granted) {
+  if (!access || !access.granted) {
     return (
       <div className="mvv-gate">
         <div className="mvv-gate-card mvv-state">

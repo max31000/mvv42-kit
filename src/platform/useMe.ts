@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useSyncExternalStore } from 'react';
-import { AUTH_CHANGED_EVENT, getMe } from './client';
+import { AUTH_CHANGED_EVENT, getMe, onAuthBroadcast } from './client';
 import { onShellMessage } from './shell';
 import type { AppAccess, Me, Mvv42User } from './types';
 
@@ -15,6 +15,8 @@ const listeners = new Set<() => void>();
 let snapshot: MeSnapshot = { me: null, loaded: false, status: 'loading' };
 let inflight: Promise<Me | null> | null = null;
 let detach: (() => void) | null = null;
+/** Set when the last subscriber left: nobody was listening for changes, so the next one re-reads `/me`. */
+let stale = false;
 
 function statusOf(me: Me | null): MeStatus {
   if (!me) return 'unavailable';
@@ -47,9 +49,11 @@ function attach() {
   const off = onShellMessage((m) => {
     if (m.type === 'AUTH_CHANGED') void reloadMe();
   });
+  const offBroadcast = onAuthBroadcast(onLocal);
   window.addEventListener(AUTH_CHANGED_EVENT, onLocal);
   detach = () => {
     off();
+    offBroadcast();
     window.removeEventListener(AUTH_CHANGED_EVENT, onLocal);
   };
 }
@@ -62,6 +66,7 @@ function subscribe(listener: () => void) {
     if (listeners.size === 0 && detach) {
       detach();
       detach = null;
+      stale = true;
     }
   };
 }
@@ -82,12 +87,16 @@ export interface UseMeResult {
 
 /**
  * Current user and app access from `/auth/api/me`, shared by every component (one request). Re-reads on the
- * shell's `AUTH_CHANGED` and after `logout()`.
+ * shell's `AUTH_CHANGED`, after `logout()` in this or another same-origin document, and when a component
+ * mounts after every subscriber had unmounted.
  */
 export function useMe(): UseMeResult {
   const s = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
   useEffect(() => {
-    if (!snapshot.loaded) void reloadMe();
+    if (!snapshot.loaded || stale) {
+      stale = false;
+      void reloadMe();
+    }
   }, []);
   const app = useCallback((appId: string) => s.me?.apps.find((a) => a.id === appId), [s.me]);
   return { me: s.me, user: s.me?.user ?? null, loading: !s.loaded, status: s.status, app, refresh: reloadMe };
@@ -97,6 +106,7 @@ export function useMe(): UseMeResult {
 export function __resetMeForTests(): void {
   snapshot = { me: null, loaded: false, status: 'loading' };
   inflight = null;
+  stale = false;
   if (detach) detach();
   detach = null;
   listeners.clear();

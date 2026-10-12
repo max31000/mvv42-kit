@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   COLOR_SCHEME_KEY,
   colorSchemeInlineScript,
+  colorSchemeInlineScriptSha256,
   migrateLegacyColorScheme,
   mvv42ColorSchemeManager,
   removeLegacyAuthKeys,
@@ -64,11 +65,19 @@ describe('mvv42ColorSchemeManager (inside the shell)', () => {
 });
 
 describe('legacy migration', () => {
-  it('migrates the Mantine key once and removes it', () => {
+  it('copies the Mantine key into the shared key and keeps the legacy key', () => {
     localStorage.setItem('mantine-color-scheme-value', 'dark');
     migrateLegacyColorScheme();
     expect(localStorage.getItem(COLOR_SCHEME_KEY)).toBe('dark');
-    expect(localStorage.getItem('mantine-color-scheme-value')).toBeNull();
+    expect(localStorage.getItem('mantine-color-scheme-value')).toBe('dark');
+  });
+
+  it('does nothing inside the shell (the shell owns the setting)', () => {
+    localStorage.setItem('mantine-color-scheme-value', 'dark');
+    migrateLegacyColorScheme({ embedded: true });
+    expect(localStorage.getItem(COLOR_SCHEME_KEY)).toBeNull();
+    mvv42ColorSchemeManager({ embedded: true }).get('auto');
+    expect(localStorage.getItem(COLOR_SCHEME_KEY)).toBeNull();
   });
 
   it('migrates cashpulse-settings.colorScheme (zustand persist) and keeps the settings', () => {
@@ -106,16 +115,38 @@ describe('colorSchemeInlineScript', () => {
 
   it('resolves auto via prefers-color-scheme', () => {
     localStorage.setItem(COLOR_SCHEME_KEY, 'auto');
-    const spy = vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: true } as MediaQueryList);
-    run();
-    expect(document.documentElement.getAttribute('data-mantine-color-scheme')).toBe('dark');
-    spy.mockRestore();
+    const original = window.matchMedia;
+    window.matchMedia = (() => ({ matches: true })) as unknown as typeof window.matchMedia;
+    try {
+      run();
+      expect(document.documentElement.getAttribute('data-mantine-color-scheme')).toBe('dark');
+    } finally {
+      window.matchMedia = original;
+    }
   });
 
   it('falls back to the legacy Mantine key', () => {
     localStorage.setItem('mantine-color-scheme-value', 'light');
     run();
     expect(document.documentElement.getAttribute('data-mantine-color-scheme')).toBe('light');
+  });
+
+  it('falls back to cashpulse-settings.colorScheme', () => {
+    localStorage.setItem('cashpulse-settings', JSON.stringify({ state: { colorScheme: 'dark' }, version: 0 }));
+    run();
+    expect(document.documentElement.getAttribute('data-mantine-color-scheme')).toBe('dark');
+  });
+
+  it('survives malformed cashpulse-settings', () => {
+    localStorage.setItem('cashpulse-settings', '{oops');
+    expect(run).not.toThrow();
+    expect(document.documentElement.getAttribute('data-mantine-color-scheme')).toBe('light');
+  });
+
+  it('exports a CSP hash that matches the script', async () => {
+    const { createHash } = await import('node:crypto');
+    const expected = `sha256-${createHash('sha256').update(colorSchemeInlineScript, 'utf8').digest('base64')}`;
+    expect(colorSchemeInlineScriptSha256).toBe(expected);
   });
 
   it('reads the shared key', () => {

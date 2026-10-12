@@ -97,7 +97,15 @@ export function AppLayout({ title, icon, nav, actions, homeHref = '/', children 
 
   return (
     <div className="mvv-app" data-embedded={insideShell || undefined}>
-      <a className="mvv-skip-link" href="#mvv-main">
+      <a
+        className="mvv-skip-link"
+        href="#mvv-main"
+        onClick={(e) => {
+          // Hash navigation would fight the router (and the shell's hash); just move focus.
+          e.preventDefault();
+          document.getElementById('mvv-main')?.focus();
+        }}
+      >
         К содержимому
       </a>
       <header className="mvv-app-header">

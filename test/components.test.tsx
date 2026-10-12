@@ -291,3 +291,82 @@ describe('AppLayout', () => {
     restore();
   });
 });
+
+describe('v0.1.1 review fixes', () => {
+  it('useShellBridge follows the provider mode, not window detection', async () => {
+    const { parent, restore } = embedInShell();
+    meResponse({ user: null, apps: [] });
+    wrap(<div />, { insideShell: false });
+    await new Promise((r) => setTimeout(r, 20));
+    expect(parent.postMessage).not.toHaveBeenCalledWith(expect.objectContaining({ type: 'READY' }), expect.anything());
+    restore();
+  });
+
+  it('useMe re-reads /me after all subscribers unmounted (stale snapshot)', async () => {
+    meResponse({ user: USER, apps: [] });
+    const first = wrap(<AccountButton />);
+    await screen.findByRole('button', { name: `Аккаунт: ${USER.name}` });
+    first.unmount();
+    meResponse({ user: null, apps: [] });
+    wrap(<AccountButton />);
+    expect(await screen.findByRole('button', { name: 'Войти' })).toBeInTheDocument();
+  });
+
+  it('useMe refreshes when another document broadcasts an auth change', async () => {
+    meResponse({ user: USER, apps: [] });
+    wrap(<AccountButton />);
+    await screen.findByRole('button', { name: `Аккаунт: ${USER.name}` });
+    meResponse({ user: null, apps: [] });
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: 'mvv42-auth-event', newValue: String(Date.now()) }));
+    });
+    expect(await screen.findByRole('button', { name: 'Войти' })).toBeInTheDocument();
+  });
+
+  it('LoginRequired treats a service missing from /me as not granted (and warns)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    meResponse({ user: USER, apps: [{ id: 'other', anonymous: false, access: 'public', granted: true }] });
+    wrap(
+      <LoginRequired>
+        <p>secret</p>
+      </LoginRequired>,
+    );
+    expect(await screen.findByText('Нет доступа')).toBeInTheDocument();
+    expect(screen.queryByText('secret')).toBeNull();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('bonds'));
+    warn.mockRestore();
+  });
+
+  it('LoginRequired shows a busy retry button while re-checking', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 502 }));
+    wrap(
+      <LoginRequired>
+        <p>secret</p>
+      </LoginRequired>,
+    );
+    const retry = await screen.findByRole('button', { name: 'Повторить' });
+    let release!: (r: Response) => void;
+    fetchMock.mockImplementationOnce(() => new Promise<Response>((r) => (release = r)));
+    await userEvent.click(retry);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Повторить' })).toHaveAttribute('data-loading'));
+    await act(async () => release(jsonResponse(200, { user: USER, apps: [{ id: 'bonds', anonymous: false, access: 'public', granted: true }] })));
+    expect(await screen.findByText('secret')).toBeInTheDocument();
+  });
+
+  it('the skip link focuses <main> without touching the URL hash', async () => {
+    meResponse({ user: null, apps: [] });
+    render(
+      <Mvv42Provider serviceId="bonds" env="test">
+        <MemoryRouter>
+          <AppLayout title="T" nav={[{ label: 'A', to: '/' }]}>
+            x
+          </AppLayout>
+        </MemoryRouter>
+      </Mvv42Provider>,
+    );
+    const before = window.location.hash;
+    await userEvent.click(screen.getByRole('link', { name: 'К содержимому' }));
+    expect(screen.getByRole('main')).toHaveFocus();
+    expect(window.location.hash).toBe(before);
+  });
+});
