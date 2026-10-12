@@ -184,6 +184,9 @@ the shell iframe). Screenshots (light/dark × 1440/390) are in [`docs/screenshot
 |---|---|
 | ![](docs/screenshots/table-light-1440.png) | ![](docs/screenshots/embedded-light-390.png) |
 
+On phones (< 640px) `actions` collapse into a «⋯» menu (aria-label «Действия») in both modes, so the bar and
+the tabs keep their width.
+
 ### Page, Section, Metric, MetricGrid
 
 - `Page { title?, description?, eyebrow?, actions?, width?: 'default' | 'wide' | 'full', gap? }` — 1080 / 1360 /
@@ -195,7 +198,10 @@ the shell iframe). Screenshots (light/dark × 1440/390) are in [`docs/screenshot
   value in 28px tabular figures; delta chip with an arrow and a screen-reader tone.
 - `MetricGrid { cols?: 1 | 2 | 3 | 4 }` — 4 → 2 columns under 900px, 1 under 360px.
 
-### DataList, ListRow, TextLink
+### DataList, ListRow, TextLink, HelpHint
+
+- `HelpHint { children, label?, width?, position?, data-testid? }` — «?» button with a popover, for Metric labels,
+  titles and table headers (ChartFrame's `explanation` uses it; its test id is `<frame data-testid>-help`).
 
 - `DataList` + `ListRow { title, description?, icon?, value?, action?, href?, linkProps?, onClick?, disabled? }` —
   divided rows for `Section padding="none"`: icon · title/description · tabular value · action. With `href` /
@@ -206,7 +212,8 @@ the shell iframe). Screenshots (light/dark × 1440/390) are in [`docs/screenshot
 ### States
 
 - `EmptyState { icon?, title, description?, action?, compact? }`
-- `ErrorState { title?, error?, onRetry?, compact? }` — understands `ApiError` (401 «Нужно войти», 403 «Нет доступа»,
+- `ErrorState { title?, error?, description?, onRetry?, retrying?, compact? }` — `description` replaces the text
+  derived from `error` — understands `ApiError` (401 «Нужно войти», 403 «Нет доступа»,
   404 «Не найдено») and shows `HTTP 502 · code` as a technical hint.
 - `LoginRequired { title?, description?, children }` — uses the provider's `serviceId`: spinner → «Сервис входа
   недоступен» (busy retry) → «Войти через Telegram» → «Нет доступа» (signed in but not granted, or the service is
@@ -375,6 +382,12 @@ An existing tag is never re-uploaded — fixes ship as the next patch. `dist/` i
 `prepare`/`prepack`/`postinstall` scripts.
 
 ## Changelog
+
+### 0.1.3
+- `AppLayout`: on phones `actions` move into a «⋯» overflow menu (standalone top bar and the shell subnav), so
+  tabs keep full width; desktop unchanged.
+- New `HelpHint` («?» popover); `ChartFrame` gains `emptyAction` and a `<data-testid>-help` id on its help button.
+- `ErrorState` gains `description`.
 
 ### 0.1.2
 - **Filled labels per scheme**: `--mvv-on-<color>` for every colour in light and dark, wired into Button,

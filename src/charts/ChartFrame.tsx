@@ -1,8 +1,9 @@
 import type { ReactElement, ReactNode } from 'react';
-import { ActionIcon, Popover, Skeleton } from '@mantine/core';
+import { Skeleton } from '@mantine/core';
 import { ResponsiveContainer } from 'recharts';
 import { Section, type SectionProps } from '../components/Section';
 import { EmptyState, ErrorState } from '../components/States';
+import { HelpHint } from '../components/HelpHint';
 import { useChartTheme } from './theme';
 
 export interface ChartFrameProps extends Omit<SectionProps, 'children' | 'title'> {
@@ -19,6 +20,8 @@ export interface ChartFrameProps extends Omit<SectionProps, 'children' | 'title'
   empty?: boolean;
   emptyTitle?: ReactNode;
   emptyDescription?: ReactNode;
+  /** Next step in the empty state (a Button). */
+  emptyAction?: ReactNode;
   /** Under the chart: a note, a data table toggle, a source. */
   footer?: ReactNode;
   /**
@@ -40,29 +43,22 @@ export function ChartFrame({
   empty,
   emptyTitle = 'Нет данных',
   emptyDescription = 'За выбранный период данных нет.',
+  emptyAction,
   footer,
   children,
   ...sectionProps
 }: ChartFrameProps) {
   const theme = useChartTheme({ height });
+  const testId = (sectionProps as { 'data-testid'?: string })['data-testid'];
   const h = theme.height;
 
   const heading = (
     <span className="mvv-chart-heading">
       {title}
       {explanation != null && (
-        <Popover width={300} position="bottom-start" withArrow>
-          <Popover.Target>
-            <ActionIcon variant="subtle" color="gray" size="xs" radius="xl" aria-label="Как читать график">
-              <span className="mvv-chart-help" aria-hidden="true">
-                ?
-              </span>
-            </ActionIcon>
-          </Popover.Target>
-          <Popover.Dropdown>
-            <div className="mvv-chart-explanation">{explanation}</div>
-          </Popover.Dropdown>
-        </Popover>
+        <HelpHint label="Как читать график" data-testid={`${testId ?? 'chart-frame'}-help`}>
+          {explanation}
+        </HelpHint>
       )}
     </span>
   );
@@ -78,7 +74,7 @@ export function ChartFrame({
   else if (empty)
     body = (
       <div className="mvv-chart-fill" style={{ minHeight: h }}>
-        <EmptyState title={emptyTitle} description={emptyDescription} compact />
+        <EmptyState title={emptyTitle} description={emptyDescription} action={emptyAction} compact />
       </div>
     );
   else if (typeof children === 'function') body = children({ height: h, isCompact: theme.isCompact });

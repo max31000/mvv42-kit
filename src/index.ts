@@ -33,6 +33,8 @@ export type { LoginRequiredProps, UserAvatarProps } from './components/Account';
 export { DataList, ListRow } from './components/DataList';
 export type { DataListProps, ListRowProps } from './components/DataList';
 export { TextLink } from './components/TextLink';
+export { HelpHint } from './components/HelpHint';
+export type { HelpHintProps } from './components/HelpHint';
 export type { TextLinkProps } from './components/TextLink';
 export { safeAvatarUrl } from './components/avatarUrl';
 export * as icons from './components/icons';

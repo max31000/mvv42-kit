@@ -413,13 +413,6 @@
     padding-right: calc(var(--mvv-sp-2) + env(safe-area-inset-right));
   }
 
-  .mvv-topbar-actions {
-    display: none;
-  }
-
-  .mvv-app[data-embedded] .mvv-topbar-actions {
-    display: flex;
-  }
 }
 
 /* ================================================================ Page */
@@ -1109,4 +1102,26 @@
   .mvv-list-row:not(:has(.mvv-list-row-action)) .mvv-list-row-main {
     padding-inline-end: var(--mvv-sp-4);
   }
+}
+
+/* ================================================================ Overflow actions (phones) */
+
+.mvv-overflow-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--mvv-sp-2);
+  padding: var(--mvv-sp-2);
+}
+
+.mvv-overflow-actions > * {
+  justify-content: flex-start;
+}
+
+.mvv-overflow-actions :where(.mvv-button) {
+  width: 100%;
+}
+
+.mvv-help-hint {
+  vertical-align: middle;
 }

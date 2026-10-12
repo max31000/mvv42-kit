@@ -73,3 +73,8 @@ export const IconMinus = make('IconMinus', ['M5 12l14 0']);
 export const IconBan = make('IconBan', ['M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0', 'M5.7 5.7l12.6 12.6']);
 export const IconBrandTelegram = make('IconBrandTelegram', ['M15 10l-4 4l6 6l4 -16l-18 7l4 2l2 6l3 -4']);
 export const IconChevronDown = make('IconChevronDown', ['M6 9l6 6l6 -6']);
+export const IconDots = make('IconDots', [
+  'M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0',
+  'M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0',
+  'M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0',
+]);

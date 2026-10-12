@@ -1,8 +1,11 @@
 import { useEffect, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import { ActionIcon, Menu } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
 import { useMvv42Context } from '../context';
 import { AccountButton, ColorSchemeToggle } from '../components/Account';
 import { cx } from '../components/cx';
+import { IconDots } from '../components/icons';
 import { useShellRouterSync } from './useShellRouterSync';
 
 export interface NavItem {
@@ -33,6 +36,22 @@ function scrollIntoViewIfPossible(el: Element | null) {
   if (el && typeof (el as HTMLElement).scrollIntoView === 'function') {
     (el as HTMLElement).scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
+}
+
+/** Phones: `actions` move into a «⋯» menu so the bar (and the tabs) keep their width. */
+function OverflowActions({ actions }: { actions: ReactNode }) {
+  return (
+    <Menu position="bottom-end" offset={6} width={240} closeOnItemClick={false}>
+      <Menu.Target>
+        <ActionIcon variant="subtle" color="gray" size={36} aria-label="Действия" className="mvv-overflow-trigger">
+          <IconDots size={18} />
+        </ActionIcon>
+      </Menu.Target>
+      <Menu.Dropdown>
+        <div className="mvv-overflow-actions">{actions}</div>
+      </Menu.Dropdown>
+    </Menu>
+  );
 }
 
 function Tabs({ title, nav }: Pick<AppLayoutProps, 'title' | 'nav'>) {
@@ -94,6 +113,10 @@ function Tabs({ title, nav }: Pick<AppLayoutProps, 'title' | 'nav'>) {
 export function AppLayout({ title, icon, nav, actions, homeHref = '/', children }: AppLayoutProps) {
   const { serviceId, insideShell } = useMvv42Context();
   useShellRouterSync(serviceId);
+  const phone = useMediaQuery('(max-width: 640px)', false, { getInitialValueInEffect: false }) ?? false;
+  const hasActions = actions != null && actions !== false;
+  const inlineActions = hasActions && !phone ? actions : null;
+  const overflow = hasActions && phone ? <OverflowActions actions={actions} /> : null;
 
   return (
     <div className="mvv-app" data-embedded={insideShell || undefined}>
@@ -131,7 +154,8 @@ export function AppLayout({ title, icon, nav, actions, homeHref = '/', children 
               </div>
             </div>
             <div className="mvv-topbar-right">
-              {actions != null && <div className="mvv-topbar-actions">{actions}</div>}
+              {inlineActions != null && <div className="mvv-topbar-actions">{inlineActions}</div>}
+              {overflow}
               <ColorSchemeToggle />
               <div className="mvv-topbar-account">
                 <AccountButton />
@@ -139,10 +163,11 @@ export function AppLayout({ title, icon, nav, actions, homeHref = '/', children 
             </div>
           </div>
         )}
-        {(nav.length > 0 || (insideShell && actions != null)) && (
+        {(nav.length > 0 || (insideShell && hasActions)) && (
           <div className="mvv-subnav">
             <Tabs title={title} nav={nav} />
-            {insideShell && actions != null && <div className="mvv-subnav-actions">{actions}</div>}
+            {insideShell && inlineActions != null && <div className="mvv-subnav-actions">{inlineActions}</div>}
+            {insideShell && overflow != null && <div className="mvv-subnav-actions">{overflow}</div>}
           </div>
         )}
       </header>

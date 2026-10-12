@@ -33,6 +33,8 @@ export interface ErrorStateProps extends Omit<HTMLAttributes<HTMLDivElement>, 't
   title?: ReactNode;
   /** An `ApiError`, `Error`, string or anything thrown. */
   error?: unknown;
+  /** Human explanation; replaces the text derived from `error` (the technical `HTTP … · code` hint stays). */
+  description?: ReactNode;
   /** Shows «Повторить». */
   onRetry?: () => void;
   /** Shows the retry button as busy (e.g. while re-fetching). */
@@ -57,7 +59,7 @@ const STATUS_TEXT: Record<number, { title: string; description: string }> = {
 };
 
 /** Failed load: what happened, a technical hint and «Повторить». Knows 401/403/404 from `ApiError`. */
-export function ErrorState({ title, error, onRetry, retrying, compact, className, ...rest }: ErrorStateProps) {
+export function ErrorState({ title, error, description, onRetry, retrying, compact, className, ...rest }: ErrorStateProps) {
   const { status, message, detail } = describe(error);
   const known = status != null ? STATUS_TEXT[status] : undefined;
   const denied = status === 403 || status === 401;
@@ -68,7 +70,7 @@ export function ErrorState({ title, error, onRetry, retrying, compact, className
       </div>
       <div className="mvv-state-title">{title ?? known?.title ?? 'Не удалось загрузить данные'}</div>
       <p className="mvv-state-description">
-        {message ?? known?.description ?? 'Проверьте соединение и попробуйте ещё раз.'}
+        {description ?? message ?? known?.description ?? 'Проверьте соединение и попробуйте ещё раз.'}
       </p>
       {detail && <code className="mvv-state-detail">{detail}</code>}
       {onRetry && (
